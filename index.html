@@ -4712,6 +4712,7 @@ useEffect(() => {
                                 setEditingJob(job);
                                 setShowModal(true);
                             }}
+                            onUpdateJob={updateJob}
                             onDelete={deleteJob}
                             onExport={exportToCSV}
                             onBackup={exportBackup}
@@ -5074,7 +5075,7 @@ useEffect(() => {
                                             <tr key={company.name} style={isHidden ? { opacity: 0.6, background: 'var(--bg-tertiary)' } : {}}>
                                                 <td>
                                                     <a href={company.url} target="_blank" rel="noopener noreferrer" className="link">
-                                                        {company.name}
+                                                        {company.name} <span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span>
                                                     </a>
                                                 </td>
                                                 <td>
@@ -5206,7 +5207,7 @@ useEffect(() => {
         }
 
         // Jobs Table Component
-        function JobsTable({ jobs, filters, setFilters, onAdd, onEdit, onDelete, onExport, onBackup, requestSort, getSortIcon }) {
+        function JobsTable({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onDelete, onExport, onBackup, requestSort, getSortIcon }) {
                         // View modal state
                         const [viewModalOpen, setViewModalOpen] = useState(false);
                         const [viewModalJob, setViewModalJob] = useState(null);
@@ -5723,9 +5724,34 @@ useEffect(() => {
                                             <tr key={job.id}>
                                                 {visibleColumns.company && <td><strong>{job.company}</strong></td>}
                                                 {visibleColumns.role && (
-                                                    <td>
+                                                    <td style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                        <button
+                                                            className="icon-btn"
+                                                            title="View"
+                                                            style={{
+                                                                background: "var(--bg-tertiary)",
+                                                                border: "1px solid var(--border-primary)",
+                                                                width: "32px",
+                                                                height: "32px",
+                                                                borderRadius: "6px",
+                                                                cursor: "pointer",
+                                                                display: "inline-flex",
+                                                                alignItems: "center",
+                                                                justifyContent: "center",
+                                                                transition: "all 0.2s ease",
+                                                                color: "var(--text-secondary)",
+                                                                fontSize: "1.1rem"
+                                                            }}
+                                                            onClick={() => {
+                                                                setViewModalJob(job);
+                                                                setViewModalOpen(true);
+                                                                setViewModalEdit(false);
+                                                            }}
+                                                        >
+                                                            <span role="img" aria-label="View">👁️</span>
+                                                        </button>
                                                         {job.url ? (
-                                                            <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)", textDecoration: "none" }}>{job.role}</a>
+                                                            <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)", textDecoration: "none" }}>{job.role} <span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span></a>
                                                         ) : job.role}
                                                     </td>
                                                 )}
@@ -5761,32 +5787,6 @@ useEffect(() => {
                                                 )}
                                                 <td>
                                                     <div style={{ display: "flex", gap: "0.5rem" }}>
-                                                        {/* View (eye) icon */}
-                                                        <button
-                                                            className="icon-btn"
-                                                            title="View"
-                                                            style={{
-                                                                background: "var(--bg-tertiary)",
-                                                                border: "1px solid var(--border-primary)",
-                                                                width: "32px",
-                                                                height: "32px",
-                                                                borderRadius: "6px",
-                                                                cursor: "pointer",
-                                                                display: "flex",
-                                                                alignItems: "center",
-                                                                justifyContent: "center",
-                                                                transition: "all 0.2s ease",
-                                                                color: "var(--text-secondary)",
-                                                                fontSize: "1.1rem"
-                                                            }}
-                                                            onClick={() => {
-                                                                setViewModalJob(job);
-                                                                setViewModalOpen(true);
-                                                                setViewModalEdit(false);
-                                                            }}
-                                                        >
-                                                            <span role="img" aria-label="View">👁️</span>
-                                                        </button>
                                                         <button 
                                                             className="icon-btn" 
                                                             onClick={() => onEdit(job)}
@@ -5932,19 +5932,33 @@ useEffect(() => {
                             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h2>Job Details</h2>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button className="icon-btn" title="Edit" style={{
-                                        background: 'var(--bg-tertiary)',
-                                        border: '1px solid var(--border-primary)',
-                                        width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '1.1rem'
-                                    }} onClick={() => {
-                                        if (!viewModalEdit) {
-                                            setEditedJobData({ ...viewModalJob });
-                                        }
-                                        setViewModalEdit(e => !e);
-                                    }}>
-                                        <span role="img" aria-label="Edit">✏️</span>
-                                    </button>
+                                    {viewModalEdit ? (
+                                        <button
+                                            className="btn"
+                                            onClick={() => {
+                                                onUpdateJob(editedJobData);
+                                                setViewModalOpen(false);
+                                                setViewModalEdit(false);
+                                                setEditedJobData(null);
+                                            }}
+                                        >
+                                            Save & Close
+                                        </button>
+                                    ) : (
+                                        <button className="icon-btn" title="Edit" style={{
+                                            background: 'var(--bg-tertiary)',
+                                            border: '1px solid var(--border-primary)',
+                                            width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '1.1rem'
+                                        }} onClick={() => {
+                                            if (!viewModalEdit) {
+                                                setEditedJobData({ ...viewModalJob });
+                                            }
+                                            setViewModalEdit(true);
+                                        }}>
+                                            <span role="img" aria-label="Edit">✏️</span>
+                                        </button>
+                                    )}
                                     <button className="modal-close" onClick={() => setViewModalOpen(false)}>×</button>
                                 </div>
                             </div>
@@ -6136,11 +6150,11 @@ useEffect(() => {
                                                     setEditedJobData(null);
                                                 }}>Cancel</button>
                                                 <button className="btn" onClick={() => {
-                                                    onEdit(editedJobData);
+                                                    onUpdateJob(editedJobData);
                                                     setViewModalOpen(false);
                                                     setViewModalEdit(false);
                                                     setEditedJobData(null);
-                                                }}>Save Changes</button>
+                                                }}>Save & Close</button>
                                             </div>
                                         )}
                                     </div>
