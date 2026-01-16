@@ -6000,7 +6000,7 @@ useEffect(() => {
                                             onChange={(e) => setFormData({ ...formData, closeReason: e.target.value })}
                                         >
                                             <option value="">Select reason...</option>
-                                            {CLOSE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                                            {Object.values(CLOSE_REASONS).map(r => <option key={r} value={r}>{r}</option>)}
                                         </select>
                                     </div>
                                 )}
