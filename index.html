@@ -709,6 +709,15 @@
             }
         }
 
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .link {
             color: var(--accent-primary);
             text-decoration: none;
@@ -4468,8 +4477,9 @@ useEffect(() => {
                                         className="nav-btn" 
                                         onClick={onBackup}
                                         style={{ 
-                                            borderColor: backupWarning ? "#ea580c" : undefined,
-                                            background: backupWarning ? "#faa29d" : undefined
+                                            borderColor: backupWarning ? "var(--warning)" : undefined,
+                                            background: backupWarning ? (theme === 'dark' ? '#7c2d12' : '#faa29d') : undefined,
+                                            color: backupWarning ? (theme === 'dark' ? '#fed7aa' : 'var(--text-primary)') : undefined
                                         }}
                                         title={lastBackupTime ? `Last backup: ${lastBackupTime.toLocaleDateString()}` : "No backup yet"}
                                     >
@@ -4500,12 +4510,17 @@ useEffect(() => {
                             background: 'var(--bg-tertiary)',
                             border: '1px solid var(--border-primary)',
                             padding: '1rem',
-                            margin: '0 1rem 1rem 1rem',
+                            margin: '1rem auto 1rem auto',
+                            marginLeft: 'auto',
+                            marginRight: 'auto',
+                            maxWidth: '1336px',
+                            width: '100%',
                             borderRadius: '6px',
                             fontSize: '0.85rem',
                             fontFamily: 'monospace',
                             maxHeight: '300px',
-                            overflow: 'auto'
+                            overflow: 'auto',
+                            boxSizing: 'border-box'
                         }}>
                             <PerformanceMonitor />
                         </div>
@@ -4517,14 +4532,28 @@ useEffect(() => {
         // Performance Monitor Component
         function PerformanceMonitor() {
             const [stats, setStats] = React.useState(null);
+            const [isLoading, setIsLoading] = React.useState(true);
             
             React.useEffect(() => {
+                // Fetch initial stats immediately
+                setStats(PerformanceUtil.getReport());
+                setIsLoading(false);
+                
                 const interval = setInterval(() => {
                     setStats(PerformanceUtil.getReport());
                 }, 2000);
                 
                 return () => clearInterval(interval);
             }, []);
+            
+            if (isLoading) {
+                return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: '1.2rem', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⚙️</span>
+                        <span>Loading performance metrics...</span>
+                    </div>
+                );
+            }
             
             if (!stats) return null;
             
