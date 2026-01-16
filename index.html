@@ -1397,7 +1397,7 @@
         };
 
         /**
-         * Track response rates by month based on follow-up dates
+         * Track response rates by month based on follow-up (close) dates
          * @param {Array} jobs - Array of job objects
          * @returns {Array} Monthly response rate data
          */
@@ -2344,12 +2344,12 @@
                 labels: data.labels,
                 datasets: [
                 {
-                    label: 'Callback Rate',
+                    label: 'Callback rate',
                     data: data.responseRates,
                     backgroundColor: '#6b8aff'
                 },
                 {
-                    label: 'Interview Rate',
+                    label: 'Interview rate',
                     data: data.interviewRates,
                     backgroundColor: '#10b981'
                 }
@@ -2408,7 +2408,7 @@
                 fontSize: '0.85rem', 
                 color: 'var(--text-tertiary)',
                 marginBottom: '0.5rem'
-                }}>Total Applications</div>
+                }}>Total applications</div>
                 <div className="stat-value" style={{ 
                 fontSize: '2rem', 
                 fontWeight: 'bold',
@@ -2428,7 +2428,7 @@
                 fontSize: '0.85rem', 
                 color: 'var(--text-tertiary)',
                 marginBottom: '0.5rem'
-                }}>Callback Rate</div>
+                }}>Callback rate</div>
                 <div className="stat-value" style={{ 
                 fontSize: '2rem', 
                 fontWeight: 'bold',
@@ -2439,7 +2439,7 @@
                 fontSize: '0.8rem', 
                 color: 'var(--text-tertiary)'
                 }}>
-                {metrics.responseRate.count} of {metrics.responseRate.total}
+                {metrics.responseRate.count} engagements
                 </div>
             </div>
 
@@ -2448,7 +2448,7 @@
                 fontSize: '0.85rem', 
                 color: 'var(--text-tertiary)',
                 marginBottom: '0.5rem'
-                }}>Interview Rate</div>
+                }}>Interview rate</div>
                 <div className="stat-value" style={{ 
                 fontSize: '2rem', 
                 fontWeight: 'bold',
@@ -2468,7 +2468,7 @@
                 fontSize: '0.85rem', 
                 color: 'var(--text-tertiary)',
                 marginBottom: '0.5rem'
-                }}>Active Pipeline</div>
+                }}>Active pipeline</div>
                 <div className="stat-value" style={{ 
                 fontSize: '2rem', 
                 fontWeight: 'bold',
@@ -2479,7 +2479,7 @@
                 fontSize: '0.8rem', 
                 color: 'var(--text-tertiary)'
                 }}>
-                {metrics.pipeline.byStatus.Applied} Idle · {metrics.pipeline.byStatus["In Progress"]} In Progress
+                {metrics.pipeline.byStatus.Applied} idle · {metrics.pipeline.byStatus["In Progress"]} in progress
                 </div>
             </div>
 
@@ -2508,7 +2508,7 @@
                 fontSize: '0.85rem', 
                 color: 'var(--text-tertiary)',
                 marginBottom: '0.5rem'
-                }}>This Week</div>
+                }}>This week</div>
                 <div className="stat-value" style={{ 
                 fontSize: '2rem', 
                 fontWeight: 'bold',
@@ -2535,7 +2535,7 @@
 
         return (
             <div className="insights-panel">
-            <h3>Insights & Recommendations</h3>
+            <h3>Insights & recommendations</h3>
             <div className="insights-list">
                 {insights.map((insight, index) => (
                 <div key={index} className={`insight-item insight-${insight.type}`}>
@@ -2782,9 +2782,9 @@
 
             {/* Charts Grid */}
             <div className="charts-section">
-                {/* Large Charts - Full Width */}
+                {/* Large charts - full width */}
                 <div className="chart-large">
-                    <ChartCard title="Applications & Response Activity">
+                    <ChartCard title="Applications & response activity">
                         <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                             <button 
                                 onClick={() => setTimeRange('past30')}
@@ -2800,7 +2800,7 @@
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                Past 30 Days
+                                Past 30 days
                             </button>
                             <button 
                                 onClick={() => setTimeRange('past12months')}
@@ -2816,7 +2816,7 @@
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                Past 12 Months
+                                Past 12 months
                             </button>
                             <button 
                                 onClick={() => setTimeRange('thisYear')}
@@ -2864,7 +2864,7 @@
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                All Time
+                                All time
                             </button>
                         </div>
                         {filteredChartData.length === 0 ? (
@@ -2876,7 +2876,7 @@
                                 data={filteredChartData}
                                 label1="Applications"
                                 label2="Responses and rejections"
-                                label3="Actual Callbacks"
+                                label3="Actual callbacks"
                                 color1="#6b8aff"
                                 color2="#f59e0b"
                                 color3="#10b981"
@@ -2889,7 +2889,7 @@
                 {/* Medium Charts - Side by Side */}
                 <div className="chart-row">
                     <div className="chart-medium">
-                        <ChartCard title="Active Pipeline Status">
+                        <ChartCard title="Active pipeline status">
                             <FunnelChartComponent 
                                 data={pipelineChartData}
                             />
@@ -2897,7 +2897,7 @@
                     </div>
 
                     <div className="chart-medium">
-                        <ChartCard title="Closure Reasons">
+                        <ChartCard title="Closure reasons">
                             <PieChartComponent data={closureChartData} />
                         </ChartCard>
                     </div>
@@ -2906,7 +2906,7 @@
                 {/* Responses and Statuses Side by Side */}
                 <div className="chart-row">
                     <div className="chart-medium">
-                        <ChartCard title="Responses by Progression">
+                        <ChartCard title="Responses by progression">
                             <PieChartComponent data={progressionChartData} />
                         </ChartCard>
                     </div>
@@ -2921,7 +2921,7 @@
                                 letterSpacing: '0.1em',
                                 fontWeight: '600'
                             }}>
-                                Application Statuses
+                                Application statuses
                             </h3>
                             <div className="table-container" style={{ border: 'none', background: 'transparent' }}>
                                 <table className="table">
@@ -4295,7 +4295,7 @@
             };
 
             const exportToCSV = () => {
-                const headers = ["Company", "Role", "Status", "Priority", "Date Applied", "URL", "Salary", "Location", "Contact", "Notes"];
+                const headers = ["Company", "Role", "Status", "Priority", "Date applied", "URL", "Salary", "Location", "Contact name", "Notes"];
                 const rows = jobs.map(j => [
                     j.company,
                     j.role,
@@ -4761,7 +4761,7 @@ useEffect(() => {
                                     >
                                         <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.76-4.852a.932.932 0 0 1 .924-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/>
                                     </svg>
-                                    Tip via PayPal
+                                    Thank me
                                 </a>
                                 <a 
                                     href="https://github.com/jburgh" 
@@ -4776,7 +4776,7 @@ useEffect(() => {
                                     >
                                         <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
                                     </svg>
-                                    GitHub Profile
+                                    GitHub
                                 </a>
                             </div>
                         </div>
@@ -4808,7 +4808,7 @@ useEffect(() => {
                                 <nav className="nav">
                                     <button className={`nav-btn ${view === "dashboard" ? "active" : ""}`} onClick={() => setView("dashboard")}>Dashboard</button>
                                     <button className={`nav-btn ${view === "companies" ? "active" : ""}`} onClick={() => setView("companies")}>Companies</button>
-                                    <button className={`nav-btn ${view === "jobs" ? "active" : ""}`} onClick={() => setView("jobs")}>Jobs</button>
+                                    <button className={`nav-btn ${view === "jobs" ? "active" : ""}`} onClick={() => setView("jobs")}>Applications</button>
                                     <button 
                                         className="nav-btn" 
                                         onClick={onBackup}
@@ -4910,7 +4910,7 @@ useEffect(() => {
             
             return (
                 <div>
-                    <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>📊 Performance Metrics</div>
+                    <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>📊 Performance metrics</div>
                     <div style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
                         Cache Hit Rate: {stats.cacheStats.hitRate} (Hits: {stats.cacheStats.hits} | Misses: {stats.cacheStats.misses})
                     </div>
@@ -5002,7 +5002,7 @@ useEffect(() => {
                 <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <h1 style={{ color: "#6b8aff" }}>Target Companies</h1>
+                            <h1 style={{ color: "#6b8aff" }}>Target companies</h1>
                             <span style={{ color: "#9ca3af", fontSize: "0.9rem", marginLeft: "0.5rem" }}>
                                 {filteredCompaniesList.length} {filteredCompaniesList.length === 1 ? 'company' : 'companies'}
                             </span>
@@ -5016,9 +5016,9 @@ useEffect(() => {
                                     onChange={(e) => setShowHidden(e.target.checked)}
                                     style={{ cursor: "pointer" }}
                                 />
-                                Show Hidden ({blockedCompanies.length})
+                                Show hidden ({blockedCompanies.length})
                             </label>
-                            <button className="btn" onClick={onAddCompany}>+ Add Company</button>
+                            <button className="btn" onClick={onAddCompany}>+ Add company</button>
                         </div>
                     </div>
 
@@ -5060,7 +5060,7 @@ useEffect(() => {
                                             Company{getSortIcon('company')}
                                         </th>
                                         <th onClick={() => requestSort('fitLevel')} style={{cursor: 'pointer'}} title="Fit level reflects how well this company tends to match your goals based on role availability, location, hiring patterns, or past experience. It's subjective and can change over time.">
-                                            Fit Level{getSortIcon('fitLevel')}
+                                            Fit level{getSortIcon('fitLevel')}
                                         </th>
                                         <th onClick={() => requestSort('applications')} style={{cursor: 'pointer'}}>
                                             Applications{getSortIcon('applications')}
@@ -5098,7 +5098,7 @@ useEffect(() => {
                                                         <option value="—">—</option>
                                                         <option value="Strong">Strong</option>
                                                         <option value="Decent">Decent</option>
-                                                        <option value="Long Shot">Long Shot</option>
+                                                        <option value="Long Shot">Long shot</option>
                                                     </select>
                                                 </td>
                                                 <td>
@@ -5133,7 +5133,7 @@ useEffect(() => {
                                                     ) : (
                                                         <>
                                                             <button className="btn btn-sm" onClick={() => onAddJob(company)} style={{ marginRight: '0.5rem' }}>
-                                                                Add Job
+                                                                Add application
                                                             </button>
                                                             <button 
                                                                 className="btn btn-sm btn-secondary" 
@@ -5166,14 +5166,14 @@ useEffect(() => {
                     {editingCompany && (
                         <div className="modal-overlay" onClick={() => setEditingCompany(null)}>
                             <div className="modal" onClick={(e) => e.stopPropagation()}>
-                                <h2>Edit Company</h2>
+                                <h2>Edit company</h2>
                                 <div className="form-group">
-                                    <label>Company Name</label>
+                                    <label>Company name</label>
                                     <input
                                         type="text"
                                         value={editCompanyName}
                                         onChange={(e) => setEditCompanyName(e.target.value)}
-                                        placeholder="Company Name"
+                                        placeholder="Company name"
                                     />
                                 </div>
                                 <div className="form-group">
@@ -5342,32 +5342,32 @@ useEffect(() => {
                 { key: 'role', label: 'Role' },
                 { key: 'status', label: 'Status' },
                 { key: 'priority', label: 'Priority' },
-                { key: 'dateApplied', label: 'Date Applied' },
+                { key: 'dateApplied', label: 'Date applied' },
                 { key: 'salary', label: 'Salary' },
                 { key: 'closeReason', label: 'Reason' },
                 { key: 'progression', label: 'Progress' },
-                { key: 'followUp', label: 'Follow-up Date' },
+                { key: 'followUp', label: 'Close date' },
                 { key: 'notes', label: 'Notes' },
                 { key: 'resumeUrl', label: 'Resume' },
-                { key: 'coverLetterUrl', label: 'Cover Letter' }
+                { key: 'coverLetterUrl', label: 'Cover letter' }
             ];
             
             return (
                 <div>
                     <div className="action-bar">
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <h1 style={{ color: "var(--accent-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: "1.75rem" }}>Job Applications</h1>
+                            <h1 style={{ color: "var(--accent-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: "1.75rem" }}>Applications</h1>
                             <span style={{ color: "var(--text-tertiary)", fontSize: "0.9rem" }}>
                                 {filteredJobs.length === jobs.length 
-                                    ? `${jobs.length} ${jobs.length === 1 ? 'job' : 'jobs'}`
-                                    : `${filteredJobs.length} of ${jobs.length} jobs`
+                                    ? `${jobs.length} ${jobs.length === 1 ? 'application' : 'applications'}`
+                                    : `${filteredJobs.length} of ${jobs.length}`
                                 }
                             </span>
                         </div>
 
                         <div style={{ display: "flex", gap: "0.5rem" }}>
                             <button className="btn btn-secondary" onClick={onExport}>📊 Export CSV</button>
-                            <button className="btn" onClick={onAdd}>+ Add Job</button>
+                            <button className="btn" onClick={onAdd}>+ Add application</button>
                         </div>
                     </div>
 
@@ -5378,7 +5378,7 @@ useEffect(() => {
                                     <input
                                         type="text"
                                         className="search-input"
-                                        placeholder="Search roles or companies..."
+                                        placeholder="Search applications by role or company"
                                         value={filters.search}
                                         onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                                     />
@@ -5408,7 +5408,7 @@ useEffect(() => {
                                     >
                                         <span>
                                             {selectedStatuses.length === 0 
-                                                ? 'All Statuses' 
+                                                ? 'All statuses' 
                                                 : `Status (${selectedStatuses.length})`}
                                         </span>
                                         <span style={{ fontSize: "0.7rem" }}>▼</span>
@@ -5479,7 +5479,7 @@ useEffect(() => {
                                     >
                                         <span>
                                             {selectedPriorities.length === 0 
-                                                ? 'All Priorities' 
+                                                ? 'All priorities' 
                                                 : `Priority (${selectedPriorities.length})`}
                                         </span>
                                         <span style={{ fontSize: "0.7rem" }}>▼</span>
@@ -5555,7 +5555,7 @@ useEffect(() => {
                                 </button>
                                 {activeFiltersCount > 0 && (
                                     <button className="btn btn-secondary" onClick={clearFilters}>
-                                        Clear Filters
+                                        Clear filters
                                     </button>
                                 )}
                             </div>
@@ -5585,7 +5585,7 @@ useEffect(() => {
                             }}>
                                 <div className="filter-group">
                                     <label className="filter-label" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500", marginBottom: "0.5rem", display: "block" }}>
-                                        Date From
+                                        Date from
                                     </label>
                                     <input
                                         type="date"
@@ -5596,7 +5596,7 @@ useEffect(() => {
                                 </div>
                                 <div className="filter-group">
                                     <label className="filter-label" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500", marginBottom: "0.5rem", display: "block" }}>
-                                        Date To
+                                        Date to
                                     </label>
                                     <input
                                         type="date"
@@ -5618,7 +5618,7 @@ useEffect(() => {
                             marginBottom: "1.5rem"
                         }}>
                             <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-primary)" }}>
-                                Visible Columns
+                                Visible columns
                             </h4>
                             <div style={{
                                 display: "grid",
@@ -5653,8 +5653,8 @@ useEffect(() => {
                     {filteredJobs.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-state-icon">🔍</div>
-                            <h3>No jobs found</h3>
-                            <p>Add a job or adjust your filters</p>
+                            <h3>No applications yet</h3>
+                            <p>Add an application or adjust your filters</p>
                         </div>
                     ) : (
                         <>
@@ -5684,7 +5684,7 @@ useEffect(() => {
                                             )}
                                             {visibleColumns.dateApplied && (
                                                 <th onClick={() => requestSort('dateApplied')} style={{cursor: 'pointer'}}>
-                                                    Date Applied{getSortIcon('dateApplied')}
+                                                    Date applied{getSortIcon('dateApplied')}
                                                 </th>
                                             )}
                                             {visibleColumns.salary && (
@@ -5704,7 +5704,7 @@ useEffect(() => {
                                             )}
                                             {visibleColumns.followUp && (
                                                 <th onClick={() => requestSort('followUp')} style={{cursor: 'pointer'}}>
-                                                    Follow-up{getSortIcon('followUp')}
+                                                    Close date{getSortIcon('followUp')}
                                                 </th>
                                             )}
                                             {visibleColumns.notes && (
@@ -5714,7 +5714,7 @@ useEffect(() => {
                                                 <th>Resume</th>
                                             )}
                                             {visibleColumns.coverLetterUrl && (
-                                                <th>Cover</th>
+                                                <th>Cover letter</th>
                                             )}
                                             <th>Actions</th>
                                         </tr>
@@ -5930,7 +5930,7 @@ useEffect(() => {
                     <div className="modal-overlay" onClick={() => setViewModalOpen(false)}>
                         <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
                             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h2>Job Details</h2>
+                                <h2>Application details</h2>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     {viewModalEdit ? (
                                         <button
@@ -5942,7 +5942,7 @@ useEffect(() => {
                                                 setEditedJobData(null);
                                             }}
                                         >
-                                            Save & Close
+                                            Save & close
                                         </button>
                                     ) : (
                                         <button className="icon-btn" title="Edit" style={{
@@ -6041,7 +6041,7 @@ useEffect(() => {
                                                 )}
                                             </div>
                                             <div className="form-group">
-                                                <label>Cover Letter URL</label>
+                                                <label>Cover letter URL</label>
                                                 {viewModalEdit ? (
                                                     <input type="url" value={editedJobData?.coverLetterUrl || ''} onChange={e => {
                                                         setEditedJobData({ ...editedJobData, coverLetterUrl: e.target.value });
@@ -6086,7 +6086,7 @@ useEffect(() => {
                                         </div>
                                         <div className="form-row">
                                             <div className="form-group">
-                                                <label>Date Applied</label>
+                                                <label>Date applied</label>
                                                 <input type="date" value={viewModalEdit ? editedJobData?.dateApplied || '' : viewModalJob.dateApplied || ''} readOnly={!viewModalEdit} onChange={e => {
                                                     setEditedJobData({ ...editedJobData, dateApplied: e.target.value });
                                                 }} style={viewFieldStyle} />
@@ -6113,13 +6113,13 @@ useEffect(() => {
                                             </div>
                                         </div>
                                         <div className="form-group">
-                                            <label>Contact</label>
+                                            <label>Contact name</label>
                                             <input type="text" value={viewModalEdit ? editedJobData?.contact || '' : viewModalJob.contact || ''} readOnly={!viewModalEdit} onChange={e => {
                                                 setEditedJobData({ ...editedJobData, contact: e.target.value });
                                             }} style={viewFieldStyle} />
                                         </div>
                                         <div className="form-group">
-                                            <label>Follow-up Date</label>
+                                            <label>Close date</label>
                                             <input type="date" value={viewModalEdit ? editedJobData?.followUp || '' : viewModalJob.followUp || ''} readOnly={!viewModalEdit} onChange={e => {
                                                 setEditedJobData({ ...editedJobData, followUp: e.target.value });
                                             }} style={viewFieldStyle} />
@@ -6182,7 +6182,7 @@ useEffect(() => {
 
             return (
                 <div>
-                    <h2 style={{ marginBottom: "1rem", color: "#6b8aff" }}>Application Statuses</h2>
+                    <h2 style={{ marginBottom: "1rem", color: "#6b8aff" }}>Application statuses</h2>
                     <div className="table-container" style={{ marginBottom: "2rem" }}>
                         <table className="table">
                             <thead>
@@ -6295,7 +6295,7 @@ useEffect(() => {
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>{job?.id ? "Edit Job" : "Add Job"}</h2>
+                            <h2>{job?.id ? "Edit application" : "Add application"}</h2>
                             <button className="modal-close" onClick={onClose}>×</button>
                         </div>
                         <form onSubmit={handleSubmit}>
@@ -6311,7 +6311,7 @@ useEffect(() => {
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label>Role Title *</label>
+                                        <label>Role title *</label>
                                         <input
                                             type="text"
                                             required
@@ -6341,7 +6341,7 @@ useEffect(() => {
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label>Cover Letter URL</label>
+                                        <label>Cover letter URL</label>
                                         <input
                                             type="url"
                                             placeholder="Link to cover letter used for this application"
@@ -6370,7 +6370,7 @@ useEffect(() => {
 {/* Show Progression for "In Progress" (editable) or "Closed" (read-only) */}
 {(formData.status === "In Progress" || formData.status === "Closed") && (
     <div className="form-group">
-        <label>Progression {formData.status === "Closed" && "(Final Stage)"}</label>
+        <label>Progression {formData.status === "Closed" && "(final stage)"}</label>
         <select 
             value={formData.progression || ""} 
             onChange={(e) => setFormData({ ...formData, progression: e.target.value })}
@@ -6386,20 +6386,20 @@ useEffect(() => {
                                 {/* Conditional: Show Close Reason if status is "Closed" */}
                                 {formData.status === "Closed" && (
                                     <div className="form-group">
-                                        <label>Close Reason *</label>
+                                        <label>Close reason *</label>
                                         <select 
                                             required
                                             value={formData.closeReason || ""} 
                                             onChange={(e) => setFormData({ ...formData, closeReason: e.target.value })}
                                         >
-                                            <option value="">Select reason...</option>
+                                            <option value="">Select a reason...</option>
                                             {Object.values(CLOSE_REASONS).map(r => <option key={r} value={r}>{r}</option>)}
                                         </select>
                                     </div>
                                 )}
 
                                 <div className="form-group">
-                                    <label>Date Applied</label>
+                                    <label>Date applied</label>
                                     <input
                                         type="date"
                                         value={formData.dateApplied}
@@ -6409,7 +6409,7 @@ useEffect(() => {
 
                                 <div className="form-row">
                                     <div className="form-group">
-                                        <label>Salary Range</label>
+                                        <label>Salary range</label>
                                         <input
                                             type="text"
                                             placeholder="e.g., $150k-$180k"
@@ -6429,7 +6429,7 @@ useEffect(() => {
                                 </div>
 
                                 <div className="form-group">
-                                    <label>Contact Name</label>
+                                    <label>Contact name</label>
                                     <input
                                         type="text"
                                         placeholder="Recruiter or hiring manager"
@@ -6439,7 +6439,7 @@ useEffect(() => {
                                 </div>
 
                                 <div className="form-group">
-                                    <label>Follow-up Date</label>
+                                    <label>Close date</label>
                                     <input
                                         type="date"
                                         value={formData.followUp}
@@ -6458,7 +6458,7 @@ useEffect(() => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                                <button type="submit" className="btn">Save Job</button>
+                                <button type="submit" className="btn">Save application</button>
                             </div>
                         </form>
                     </div>
@@ -6543,7 +6543,7 @@ useEffect(() => {
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
                         <div className="modal-header">
-                            <h2>Import Backup</h2>
+                            <h2>Import backup</h2>
                             <button className="modal-close" onClick={onClose}>×</button>
                         </div>
                         <div className="modal-body">
@@ -6578,7 +6578,7 @@ useEffect(() => {
                                             id="backup-file-input"
                                         />
                                         <label htmlFor="backup-file-input">
-                                            <span className="btn">Choose File</span>
+                                            <span className="btn">Choose file</span>
                                         </label>
                                     </div>
                                 </>
@@ -6613,7 +6613,7 @@ useEffect(() => {
                                     </div>
 
                                     <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
-                                        <h3 style={{ color: 'var(--accent-primary)', marginBottom: '1rem' }}>Import Mode</h3>
+                                        <h3 style={{ color: 'var(--accent-primary)', marginBottom: '1rem' }}>Import mode</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                             <label style={{ 
                                                 display: 'flex', 
@@ -6634,7 +6634,7 @@ useEffect(() => {
                                                 />
                                                 <div>
                                                     <div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>
-                                                        🔄 Merge (Recommended for historical data)
+                                                        🔄 Merge (recommended for historical data)
                                                     </div>
                                                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                                                         Adds new jobs and companies without deleting existing data. Skips duplicates based on company + role + date.
@@ -6661,7 +6661,7 @@ useEffect(() => {
                                                 />
                                                 <div>
                                                     <div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>
-                                                        ⚠️ Replace All
+                                                        ⚠️ Replace all
                                                     </div>
                                                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                                                         Deletes all current data and replaces with backup. Use when restoring from backup.
@@ -6676,7 +6676,7 @@ useEffect(() => {
                                         onClick={() => { setPreview(null); setSelectedFile(null); setFileContent(null); }}
                                         style={{ width: '100%' }}
                                     >
-                                        ← Choose Different File
+                                        ← Choose different file
                                     </button>
                                 </>
                             )}
@@ -6685,7 +6685,7 @@ useEffect(() => {
                             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
                             {preview && (
                                 <button type="button" className="btn" onClick={handleImport}>
-                                    {importMode === 'merge' ? '🔄 Merge Data' : '⚠️ Replace All Data'}
+                                    {importMode === 'merge' ? '🔄 Merge data' : '⚠️ Replace all data'}
                                 </button>
                             )}
                         </div>
@@ -6726,13 +6726,13 @@ useEffect(() => {
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>Add Company</h2>
+                            <h2>Add company</h2>
                             <button className="modal-close" onClick={onClose}>×</button>
                         </div>
                         <form onSubmit={handleSubmit}>
                             <div className="modal-body">
                                 <div className="form-group">
-                                    <label>Company Name *</label>
+                                    <label>Company name *</label>
                                     <input
                                         type="text"
                                         required
@@ -6743,7 +6743,7 @@ useEffect(() => {
                                 </div>
 
                                 <div className="form-group">
-                                    <label>Careers Page URL *</label>
+                                    <label>Careers page URL *</label>
                                     <input
                                         type="url"
                                         required
@@ -6763,13 +6763,13 @@ useEffect(() => {
                                         {existingCategories.map(cat => (
                                             <option key={cat} value={cat}>{cat}</option>
                                         ))}
-                                        <option value="">-- Create New Category --</option>
+                                        <option value="">Create new category</option>
                                     </select>
                                 </div>
 
                                 {formData.category === "" && (
                                     <div className="form-group">
-                                        <label>New Category Name *</label>
+                                        <label>New category name *</label>
                                         <input
                                             type="text"
                                             required={formData.category === ""}
@@ -6782,7 +6782,7 @@ useEffect(() => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                                <button type="submit" className="btn">Add Company</button>
+                                <button type="submit" className="btn">Add company</button>
                             </div>
                         </form>
                     </div>
@@ -6804,7 +6804,7 @@ useEffect(() => {
         function PriorityBadge({ priority }) {
             if (!priority) {
                 console.warn("PriorityBadge received undefined priority");
-                return <span className="priority-badge priority-tier2">No Priority</span>;
+                return <span className="priority-badge priority-tier2">No priority</span>;
             }
             const className = `priority-badge priority-${priority.toLowerCase().replace(/\s+/g, "")}`;
             return <span className={className}>{priority}</span>;
