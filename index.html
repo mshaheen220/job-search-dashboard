@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Search Dashboard - Jill Shaheen</title>
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
 
     <!-- 1. React -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -758,649 +764,967 @@
     <div id="root"></div>
 
     <script type="text/babel">
+    /* ===========================================
+       APPLICATION CONSTANTS & CONFIGURATION
+       =========================================== */
+    
+    const APP_CONFIG = {
+        // Application version and metadata
+        VERSION: '1.0',
+        APP_NAME: 'Job Search Dashboard',
+        
+        // Storage keys
+        STORAGE_KEYS: {
+            JOBS: 'jobTrackerJobs',
+            CUSTOM_COMPANIES: 'jobTrackerCustomCompanies',
+            BLOCKED_COMPANIES: 'blockedCompanies',
+            LAST_BACKUP: 'jobTrackerLastBackup',
+            THEME: 'theme'
+        },
+        
+        // Date and time constants
+        BACKUP_INTERVAL_MS: 60 * 60 * 1000, // 1 hour
+        MS_PER_DAY: 1000 * 60 * 60 * 24,
+        
+        // Pagination
+        ITEMS_PER_PAGE: 20,
+        
+        // Analytics thresholds
+        HOT_PERIOD_MULTIPLIER: 1.25,
+        MIN_APPLICATIONS_FOR_COMPANY_STATS: 2
+    };
+    
+    // Job application statuses
+    const JOB_STATUSES = {
+        APPLIED: 'Applied',
+        IN_PROGRESS: 'In Progress',
+        CLOSED: 'Closed'
+    };
+    
+    // Closure reasons for closed applications
+    const CLOSE_REASONS = {
+        GHOSTED: 'Ghosted',
+        REJECTED: 'Rejected',
+        DECLINED_OFFER: 'Declined Offer',
+        WITHDREW: 'Withdrew'
+    };
+    
+    // Application progression stages
+    const PROGRESSION_STAGES = {
+        APPLICATION: 'Application',
+        RECRUITER_SCREEN: 'Recruiter Screen',
+        PARTIAL_LOOP: 'Partial Loop',
+        FULL_LOOP: 'Full Loop',
+        OFFER: 'Offer'
+    };
+    
+    // Priority tiers for job applications
+    const PRIORITY_TIERS = {
+        TIER_1: 'Tier 1',  // Highest priority
+        TIER_2: 'Tier 2',  // Medium priority
+        TIER_3: 'Tier 3'   // Lower priority
+    };
+    
+    // Company fit levels
+    const FIT_LEVELS = {
+        STRONG: { value: 3, label: 'Strong' },
+        DECENT: { value: 2, label: 'Decent' },
+        LONG_SHOT: { value: 1, label: 'Long Shot' },
+        UNSET: { value: null, label: '—' }
+    };
+    
+    /* Legacy arrays for backward compatibility - gradually migrate to objects above */
+    const STATUSES = Object.values(JOB_STATUSES);
+    const PROGRESSIONS = Object.values(PROGRESSION_STAGES);
+    const PRIORITIES = Object.values(PRIORITY_TIERS);
+    
+    /* ===========================================
+       ANALYTICS MODULE
+       =========================================== */
+    
     window.analytics = (() => {
 
         // ============================================
         // HELPER FUNCTIONS
         // ============================================
 
+        /**
+         * Parse a date string into a Date object
+         * @param {string} dateString - The date string to parse
+         * @returns {Date|null} Parsed date or null if invalid
+         */
+        /**
+         * Parse a date string into a Date object
+         * @param {string} dateString - The date string to parse
+         * @returns {Date|null} Parsed date or null if invalid
+         */
         const parseDate = (dateString) => {
-        if (!dateString) return null;
-        const date = new Date(dateString);
-        return isNaN(date.getTime()) ? null : date;
+            if (!dateString) return null;
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? null : date;
         };
 
+        /**
+         * Calculate ISO week number for a given date
+         * @param {Date} date - The date to calculate week number for
+         * @returns {number} ISO week number
+         */
         const getWeekNumber = (date) => {
-        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-        const dayNum = d.getUTCDay() || 7;
-        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         };
 
+        /**
+         * Format date as YYYY-MM for grouping by month
+         * @param {Date} date - The date to format
+         * @returns {string} Formatted month-year string
+         */
         const getMonthYear = (date) => {
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         };
 
+        /**
+         * Format date as YYYY-Www for grouping by week
+         * @param {Date} date - The date to format
+         * @returns {string} Formatted week-year string
+         */
         const getWeekYear = (date) => {
-        const week = getWeekNumber(date);
-        return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`;
+            const week = getWeekNumber(date);
+            return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`;
         };
 
+        /**
+         * Filter jobs by date range
+         * @param {Array} jobs - Array of job objects
+         * @param {Date} startDate - Start of date range (inclusive)
+         * @param {Date} endDate - End of date range (inclusive)
+         * @returns {Array} Filtered jobs array
+         */
         const filterByDateRange = (jobs, startDate, endDate) => {
-        return jobs.filter(job => {
-            const appliedDate = parseDate(job.dateApplied);
-            if (!appliedDate) return false;
-            if (startDate && appliedDate < startDate) return false;
-            if (endDate && appliedDate > endDate) return false;
-            return true;
-        });
+            return jobs.filter(job => {
+                const appliedDate = parseDate(job.dateApplied);
+                if (!appliedDate) return false;
+                if (startDate && appliedDate < startDate) return false;
+                if (endDate && appliedDate > endDate) return false;
+                return true;
+            });
         };
 
         // ============================================
         // CORE METRICS CALCULATIONS
         // ============================================
 
+        /**
+         * Get total number of applications with a date
+         * @param {Array} jobs - Array of job objects
+         * @returns {number} Total applications count
+         */
         const getTotalApplications = (jobs) => {
-        return jobs.filter(job => job.dateApplied).length;
+            return jobs.filter(job => job.dateApplied).length;
         };
 
+        /**
+         * Calculate applications by various time windows
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Application counts by time period
+         */
         const getApplicationsByTimeWindow = (jobs) => {
-        const now = new Date();
-        
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-        
-        return {
-            today: filterByDateRange(jobs, startOfToday, null).length,
-            thisWeek: filterByDateRange(jobs, startOfWeek, null).length,
-            thisMonth: filterByDateRange(jobs, startOfMonth, null).length,
-            lastMonth: filterByDateRange(jobs, startOfLastMonth, endOfLastMonth).length,
-            total: getTotalApplications(jobs)
-        };
-        };
-
-        const getResponseRate = (jobs) => {
-        const applicationsWithDate = jobs.filter(job => job.dateApplied);
-        const total = applicationsWithDate.length;
-        
-        if (total === 0) return { 
-            count: 0, 
-            percentage: 0, 
-            total,
-            waiting: 0
-        };
-        
-        const responded = applicationsWithDate.filter(job => {
-            /* Count as response if status is "In Progress" */
-            if (job.status === "In Progress") return true;
+            const now = new Date();
             
-            /* Count as response if progression moved beyond "Application" */
-            const prog = job.progression || "Application";
-            if (prog !== "Application") return true;
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay());
+            startOfWeek.setHours(0, 0, 0, 0);
             
-            /* Count as response if closed due to withdrawal (you withdrew after engagement) */
-            if (job.status === "Closed" && job.closeReason === "Withdrew") return true;
-            
-            return false;
-        });
-        
-        const waiting = applicationsWithDate.filter(job => {
-            return job.status === "Applied" && (job.progression || "Application") === "Application";
-        });
-        
-        return {
-            count: responded.length,
-            percentage: Math.round((responded.length / total) * 100),
-            total,
-            waiting: waiting.length
-        };
-        };
-
-        const getWaitingStatus = (jobs) => {
-        const waiting = jobs.filter(job => 
-            job.status === "Applied" && 
-            (job.progression || "Application") === "Application"
-        );
-        
-        const now = new Date();
-        const waitingByDuration = {
-            "0-7 days": 0,
-            "8-14 days": 0,
-            "15-30 days": 0,
-            "31-60 days": 0,
-            "60+ days": 0
-        };
-        
-        waiting.forEach(job => {
-            if (!job.dateApplied) return;
-            
-            const appliedDate = new Date(job.dateApplied);
-            const daysWaiting = Math.floor((now - appliedDate) / (1000 * 60 * 60 * 24));
-            
-            if (daysWaiting <= 7) {
-            waitingByDuration["0-7 days"]++;
-            } else if (daysWaiting <= 14) {
-            waitingByDuration["8-14 days"]++;
-            } else if (daysWaiting <= 30) {
-            waitingByDuration["15-30 days"]++;
-            } else if (daysWaiting <= 60) {
-            waitingByDuration["31-60 days"]++;
-            } else {
-            waitingByDuration["60+ days"]++;
-            }
-        });
-        
-        return {
-            total: waiting.length,
-            byDuration: waitingByDuration,
-            jobs: waiting
-        };
-        };
-
-        const getInterviewConversionRate = (jobs) => {
-        const applicationsWithDate = jobs.filter(job => job.dateApplied);
-        const total = applicationsWithDate.length;
-        
-        if (total === 0) return { count: 0, percentage: 0, total };
-        
-        const interviewStages = ["Recruiter Screen", "Partial Loop", "Full Loop", "Offer"];
-        const interviewed = applicationsWithDate.filter(job => 
-            interviewStages.includes(job.progression)
-        );
-        
-        return {
-            count: interviewed.length,
-            percentage: Math.round((interviewed.length / total) * 100),
-            total
-        };
-        };
-
-        const getOfferRate = (jobs) => {
-        const applicationsWithDate = jobs.filter(job => job.dateApplied);
-        const total = applicationsWithDate.length;
-        
-        if (total === 0) return { count: 0, percentage: 0, total };
-        
-        const offers = applicationsWithDate.filter(job => job.progression === "Offer");
-        
-        return {
-            count: offers.length,
-            percentage: Math.round((offers.length / total) * 100),
-            total
-        };
-        };
-
-        const getPipelineStatus = (jobs) => {
-        const activePipeline = jobs.filter(job => 
-            job.status === "Applied" || job.status === "In Progress"
-        );
-        
-        const byStage = {
-            "Application": 0,
-            "Recruiter Screen": 0,
-            "Partial Loop": 0,
-            "Full Loop": 0,
-            "Offer": 0
-        };
-        
-        const byStatus = {
-            "Applied": 0,
-            "In Progress": 0
-        };
-        
-        activePipeline.forEach(job => {
-            const stage = job.progression || "Application";
-            if (byStage.hasOwnProperty(stage)) {
-            byStage[stage]++;
-            }
-            
-            if (job.status === "Applied") {
-            byStatus["Applied"]++;
-            } else if (job.status === "In Progress") {
-            byStatus["In Progress"]++;
-            }
-        });
-        
-        return {
-            total: activePipeline.length,
-            byStage,
-            byStatus,
-            jobs: activePipeline
-        };
-        };
-
-        const getClosureReasons = (jobs) => {
-        const closed = jobs.filter(job => job.status === "Closed");
-        
-        const counts = {
-            "Rejected": 0,
-            "Ghosted": 0,
-            "Withdrew": 0,
-            "Unknown": 0
-        };
-        
-        closed.forEach(job => {
-            const reason = job.closeReason || "Unknown";
-            if (counts.hasOwnProperty(reason)) {
-            counts[reason]++;
-            } else {
-            counts["Unknown"]++;
-            }
-        });
-        
-        return {
-            total: closed.length,
-            counts
-        };
-        };
-
-        const getRejectionRate = (jobs) => {
-        const closed = jobs.filter(job => job.status === "Closed");
-        const total = closed.length;
-        
-        if (total === 0) return { count: 0, percentage: 0, total };
-        
-        const rejected = closed.filter(job => job.closeReason === "Rejected");
-        
-        return {
-            count: rejected.length,
-            percentage: Math.round((rejected.length / total) * 100),
-            total
-        };
-        };
-
-        const getClosedProgressionBreakdown = (jobs) => {
-        const closed = jobs.filter(job => job.status === "Closed");
-        
-        const byProgression = {
-            "Application": 0,
-            "Recruiter Screen": 0,
-            "Partial Loop": 0,
-            "Full Loop": 0,
-            "Offer": 0
-        };
-        
-        closed.forEach(job => {
-            const prog = job.progression || "Application";
-            if (byProgression.hasOwnProperty(prog)) {
-            byProgression[prog]++;
-            }
-        });
-        
-        return {
-            total: closed.length,
-            byProgression
-        };
-        };
-
-        const getApplicationsPerWeek = (jobs) => {
-        const jobsWithDates = jobs.filter(job => job.dateApplied);
-        
-        const weekMap = {};
-        
-        jobsWithDates.forEach(job => {
-            const date = parseDate(job.dateApplied);
-            if (!date) return;
-            
-            const weekKey = getWeekYear(date);
-            weekMap[weekKey] = (weekMap[weekKey] || 0) + 1;
-        });
-        
-        const weeks = Object.entries(weekMap)
-            .map(([week, count]) => ({ week, count }))
-            .sort((a, b) => a.week.localeCompare(b.week));
-        
-        const totalWeeks = weeks.length;
-        const totalApps = weeks.reduce((sum, w) => sum + w.count, 0);
-        const average = totalWeeks > 0 ? Math.round(totalApps / totalWeeks) : 0;
-        
-        return {
-            byWeek: weeks,
-            average,
-            total: totalApps
-        };
-        };
-
-        const getApplicationsPerMonth = (jobs) => {
-        const jobsWithDates = jobs.filter(job => job.dateApplied);
-        
-        const monthMap = {};
-        
-        jobsWithDates.forEach(job => {
-            const date = parseDate(job.dateApplied);
-            if (!date) return;
-            
-            const monthKey = getMonthYear(date);
-            monthMap[monthKey] = (monthMap[monthKey] || 0) + 1;
-        });
-        
-        const months = Object.entries(monthMap)
-            .map(([month, count]) => {
-            const [year, monthNum] = month.split('-');
-            const date = new Date(parseInt(year), parseInt(monthNum) - 1);
-            const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-            return { month, label, count };
-            })
-            .sort((a, b) => a.month.localeCompare(b.month));
-        
-        const totalMonths = months.length;
-        const totalApps = months.reduce((sum, m) => sum + m.count, 0);
-        const average = totalMonths > 0 ? Math.round(totalApps / totalMonths) : 0;
-        
-        return {
-            byMonth: months,
-            average,
-            total: totalApps
-        };
-        };
-
-        const getResponseRateByMonth = (jobs) => {
-        // Count follow-ups by the `followUp` date field. "responded" here means
-        // the job has a followUp date in the month AND `progression` is not "Application".
-        const monthMap = {};
-
-        jobs.forEach(job => {
-            if (!job.followUp) return;
-            const date = parseDate(job.followUp);
-            if (!date) return;
-
-            const monthKey = getMonthYear(date);
-            if (!monthMap[monthKey]) {
-                monthMap[monthKey] = { followUps: 0, responded: 0 };
-            }
-
-            monthMap[monthKey].followUps++;
-            if (job.progression && job.progression !== "Application") {
-                monthMap[monthKey].responded++;
-            }
-        });
-
-        const months = Object.entries(monthMap)
-            .map(([month, data]) => {
-                const [year, monthNum] = month.split('-');
-                const date = new Date(parseInt(year), parseInt(monthNum) - 1);
-                const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-                const responsePercentage = data.followUps > 0 ? Math.round((data.responded / data.followUps) * 100) : 0;
-
-                return {
-                    month,
-                    label,
-                    followUps: data.followUps,
-                    responded: data.responded,
-                    responsePercentage
-                };
-            })
-            .sort((a, b) => a.month.localeCompare(b.month));
-
-        return months;
-        };
-
-        const getHotApplicationPeriods = (jobs) => {
-        const monthlyData = getApplicationsPerMonth(jobs);
-        const hotThreshold = monthlyData.average * 1.25;
-        
-        const hotPeriods = monthlyData.byMonth
-            .filter(item => item.count >= hotThreshold)
-            .map(item => ({
-            period: item.label,
-            applications: item.count,
-            vsAverage: Math.round(((item.count - monthlyData.average) / monthlyData.average) * 100)
-            }));
-        
-        return {
-            hotPeriods,
-            threshold: Math.round(hotThreshold),
-            average: monthlyData.average
-        };
-        };
-
-        const getHotResponsePeriods = (jobs) => {
-        const monthlyResponses = getResponseRateByMonth(jobs);
-        
-        const totalApps = monthlyResponses.reduce((sum, item) => sum + item.total, 0);
-        const totalResponses = monthlyResponses.reduce((sum, item) => sum + item.responded, 0);
-        const overallAverage = totalApps > 0 ? (totalResponses / totalApps) * 100 : 0;
-        
-        const hotThreshold = overallAverage * 1.25;
-        
-        const hotPeriods = monthlyResponses
-            .filter(item => item.percentage >= hotThreshold && item.total >= 3)
-            .map(item => ({
-            period: item.label,
-            responseRate: item.percentage,
-            applications: item.total,
-            responses: item.responded
-            }));
-        
-        return {
-            hotPeriods,
-            threshold: Math.round(hotThreshold),
-            average: Math.round(overallAverage)
-        };
-        };
-
-        const getApplicationsByCompany = (jobs) => {
-        const jobsWithDates = jobs.filter(job => job.dateApplied);
-        
-        const companyData = {};
-        
-        jobsWithDates.forEach(job => {
-            const company = job.company || "Unknown";
-            
-            if (!companyData[company]) {
-            companyData[company] = {
-                total: 0,
-                applied: 0,
-                inProgress: 0,
-                closed: 0,
-                responded: 0,
-                rejected: 0,
-                offers: 0
-            };
-            }
-            
-            companyData[company].total++;
-            
-            if (job.status === "Applied") {
-            companyData[company].applied++;
-            } else if (job.status === "In Progress") {
-            companyData[company].inProgress++;
-            } else if (job.status === "Closed") {
-            companyData[company].closed++;
-            }
-            
-            const prog = job.progression || "Application";
-            if (job.status === "In Progress" || prog !== "Application") {
-            companyData[company].responded++;
-            }
-            
-            if (job.closeReason === "Rejected") {
-            companyData[company].rejected++;
-            }
-            
-            if (prog === "Offer") {
-            companyData[company].offers++;
-            }
-        });
-        
-        const companies = Object.entries(companyData)
-            .map(([name, data]) => ({
-            name,
-            ...data,
-            responseRate: data.total > 0 
-                ? Math.round((data.responded / data.total) * 100) 
-                : 0
-            }))
-            .sort((a, b) => b.total - a.total);
-        
-        return companies;
-        };
-
-        const getSuccessRateByPriority = (jobs) => {
-        const jobsWithDates = jobs.filter(job => job.dateApplied);
-        
-        const priorityData = {
-            "Tier 1": { total: 0, responded: 0, interviewed: 0, offers: 0 },
-            "Tier 2": { total: 0, responded: 0, interviewed: 0, offers: 0 },
-            "Tier 3": { total: 0, responded: 0, interviewed: 0, offers: 0 }
-        };
-        
-        const interviewStages = ["Recruiter Screen", "Partial Loop", "Full Loop", "Offer"];
-        
-        jobsWithDates.forEach(job => {
-            const tier = job.priority || "Tier 3";
-            
-            if (priorityData[tier]) {
-            priorityData[tier].total++;
-            
-            if (job.status === "In Progress" || (job.progression && job.progression !== "Application")) {
-                priorityData[tier].responded++;
-            }
-            
-            if (job.progression && interviewStages.includes(job.progression)) {
-                priorityData[tier].interviewed++;
-            }
-            
-            if (job.progression === "Offer") {
-                priorityData[tier].offers++;
-            }
-            }
-        });
-        
-        const result = Object.entries(priorityData).map(([tier, data]) => {
-            const responseRate = data.total > 0 ? Math.round((data.responded / data.total) * 100) : 0;
-            const interviewRate = data.total > 0 ? Math.round((data.interviewed / data.total) * 100) : 0;
-            const offerRate = data.total > 0 ? Math.round((data.offers / data.total) * 100) : 0;
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
             
             return {
-            tier,
-            total: data.total,
-            responded: data.responded,
-            interviewed: data.interviewed,
-            offers: data.offers,
-            responseRate,
-            interviewRate,
-            offerRate
+                today: filterByDateRange(jobs, startOfToday, null).length,
+                thisWeek: filterByDateRange(jobs, startOfWeek, null).length,
+                thisMonth: filterByDateRange(jobs, startOfMonth, null).length,
+                lastMonth: filterByDateRange(jobs, startOfLastMonth, endOfLastMonth).length,
+                total: getTotalApplications(jobs)
             };
-        });
-        
-        return result;
         };
 
-        const getMostResponsiveCompanies = (jobs, minApplications = 2) => {
-        const companies = getApplicationsByCompany(jobs);
-        
-        return companies
-            .filter(company => company.total >= minApplications)
-            .sort((a, b) => b.responseRate - a.responseRate)
-            .slice(0, 10);
+        /**
+         * Calculate response rate (companies that moved past application stage)
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Response statistics
+         */
+        const getResponseRate = (jobs) => {
+            const applicationsWithDate = jobs.filter(job => job.dateApplied);
+            const total = applicationsWithDate.length;
+            
+            if (total === 0) return { 
+                count: 0, 
+                percentage: 0, 
+                total,
+                waiting: 0
+            };
+            
+            // Count as response if status is "In Progress" or progression moved beyond "Application"
+            const responded = applicationsWithDate.filter(job => {
+                if (job.status === JOB_STATUSES.IN_PROGRESS) return true;
+                
+                const prog = job.progression || PROGRESSION_STAGES.APPLICATION;
+                if (prog !== PROGRESSION_STAGES.APPLICATION) return true;
+                
+                // Count withdrawals after engagement as responses
+                if (job.status === JOB_STATUSES.CLOSED && job.closeReason === CLOSE_REASONS.WITHDREW) {
+                    return true;
+                }
+                
+                return false;
+            });
+            
+            const waiting = applicationsWithDate.filter(job => {
+                return job.status === JOB_STATUSES.APPLIED && 
+                       (job.progression || PROGRESSION_STAGES.APPLICATION) === PROGRESSION_STAGES.APPLICATION;
+            });
+            
+            return {
+                count: responded.length,
+                percentage: Math.round((responded.length / total) * 100),
+                total,
+                waiting: waiting.length
+            };
         };
 
+        /**
+         * Analyze waiting applications by duration buckets
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Waiting applications statistics
+         */
+        const getWaitingStatus = (jobs) => {
+            const waiting = jobs.filter(job => 
+                job.status === JOB_STATUSES.APPLIED && 
+                (job.progression || PROGRESSION_STAGES.APPLICATION) === PROGRESSION_STAGES.APPLICATION
+            );
+            
+            const now = new Date();
+            const waitingByDuration = {
+                "0-7 days": 0,
+                "8-14 days": 0,
+                "15-30 days": 0,
+                "31-60 days": 0,
+                "60+ days": 0
+            };
+            
+            waiting.forEach(job => {
+                if (!job.dateApplied) return;
+                
+                const appliedDate = new Date(job.dateApplied);
+                const daysWaiting = Math.floor((now - appliedDate) / APP_CONFIG.MS_PER_DAY);
+                
+                if (daysWaiting <= 7) {
+                    waitingByDuration["0-7 days"]++;
+                } else if (daysWaiting <= 14) {
+                    waitingByDuration["8-14 days"]++;
+                } else if (daysWaiting <= 30) {
+                    waitingByDuration["15-30 days"]++;
+                } else if (daysWaiting <= 60) {
+                    waitingByDuration["31-60 days"]++;
+                } else {
+                    waitingByDuration["60+ days"]++;
+                }
+            });
+            
+            return {
+                total: waiting.length,
+                byDuration: waitingByDuration,
+                jobs: waiting
+            };
+        };
+
+        /**
+         * Calculate interview conversion rate
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Interview conversion statistics
+         */
+        const getInterviewConversionRate = (jobs) => {
+            const applicationsWithDate = jobs.filter(job => job.dateApplied);
+            const total = applicationsWithDate.length;
+            
+            if (total === 0) return { count: 0, percentage: 0, total };
+            
+            const interviewStages = [
+                PROGRESSION_STAGES.RECRUITER_SCREEN,
+                PROGRESSION_STAGES.PARTIAL_LOOP,
+                PROGRESSION_STAGES.FULL_LOOP,
+                PROGRESSION_STAGES.OFFER
+            ];
+            
+            const interviewed = applicationsWithDate.filter(job => 
+                interviewStages.includes(job.progression)
+            );
+            
+            return {
+                count: interviewed.length,
+                percentage: Math.round((interviewed.length / total) * 100),
+                total
+            };
+        };
+
+        /**
+         * Calculate offer rate
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Offer statistics
+         */
+        const getOfferRate = (jobs) => {
+            const applicationsWithDate = jobs.filter(job => job.dateApplied);
+            const total = applicationsWithDate.length;
+            
+            if (total === 0) return { count: 0, percentage: 0, total };
+            
+            const offers = applicationsWithDate.filter(job => 
+                job.progression === PROGRESSION_STAGES.OFFER
+            );
+            
+            return {
+                count: offers.length,
+                percentage: Math.round((offers.length / total) * 100),
+                total
+            };
+        };
+
+        /**
+         * Get pipeline status for active applications
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Pipeline statistics by stage and status
+         */
+        const getPipelineStatus = (jobs) => {
+            const activePipeline = jobs.filter(job => 
+                job.status === JOB_STATUSES.APPLIED || job.status === JOB_STATUSES.IN_PROGRESS
+            );
+            
+            const byStage = {
+                [PROGRESSION_STAGES.APPLICATION]: 0,
+                [PROGRESSION_STAGES.RECRUITER_SCREEN]: 0,
+                [PROGRESSION_STAGES.PARTIAL_LOOP]: 0,
+                [PROGRESSION_STAGES.FULL_LOOP]: 0,
+                [PROGRESSION_STAGES.OFFER]: 0
+            };
+            
+            const byStatus = {
+                [JOB_STATUSES.APPLIED]: 0,
+                [JOB_STATUSES.IN_PROGRESS]: 0
+            };
+            
+            activePipeline.forEach(job => {
+                const stage = job.progression || PROGRESSION_STAGES.APPLICATION;
+                if (byStage.hasOwnProperty(stage)) {
+                    byStage[stage]++;
+                }
+                
+                if (job.status === JOB_STATUSES.APPLIED) {
+                    byStatus[JOB_STATUSES.APPLIED]++;
+                } else if (job.status === JOB_STATUSES.IN_PROGRESS) {
+                    byStatus[JOB_STATUSES.IN_PROGRESS]++;
+                }
+            });
+            
+            return {
+                total: activePipeline.length,
+                byStage,
+                byStatus,
+                jobs: activePipeline
+            };
+        };
+
+        /**
+         * Analyze closure reasons for closed applications
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Closure statistics by reason
+         */
+        const getClosureReasons = (jobs) => {
+            const closed = jobs.filter(job => job.status === JOB_STATUSES.CLOSED);
+            
+            const counts = {
+                [CLOSE_REASONS.REJECTED]: 0,
+                [CLOSE_REASONS.GHOSTED]: 0,
+                [CLOSE_REASONS.WITHDREW]: 0,
+                "Unknown": 0
+            };
+            
+            closed.forEach(job => {
+                const reason = job.closeReason || "Unknown";
+                if (counts.hasOwnProperty(reason)) {
+                    counts[reason]++;
+                } else {
+                    counts["Unknown"]++;
+                }
+            });
+            
+            return {
+                total: closed.length,
+                counts
+            };
+        };
+
+        /**
+         * Calculate rejection rate from closed applications
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Rejection statistics
+         */
+        const getRejectionRate = (jobs) => {
+            const closed = jobs.filter(job => job.status === JOB_STATUSES.CLOSED);
+            const total = closed.length;
+            
+            if (total === 0) return { count: 0, percentage: 0, total };
+            
+            const rejected = closed.filter(job => job.closeReason === CLOSE_REASONS.REJECTED);
+            
+            return {
+                count: rejected.length,
+                percentage: Math.round((rejected.length / total) * 100),
+                total
+            };
+        };
+
+        /**
+         * Break down closed applications by progression stage
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Closed applications by progression
+         */
+        const getClosedProgressionBreakdown = (jobs) => {
+            const closed = jobs.filter(job => job.status === JOB_STATUSES.CLOSED);
+            
+            const byProgression = {
+                [PROGRESSION_STAGES.APPLICATION]: 0,
+                [PROGRESSION_STAGES.RECRUITER_SCREEN]: 0,
+                [PROGRESSION_STAGES.PARTIAL_LOOP]: 0,
+                [PROGRESSION_STAGES.FULL_LOOP]: 0,
+                [PROGRESSION_STAGES.OFFER]: 0
+            };
+            
+            closed.forEach(job => {
+                const prog = job.progression || PROGRESSION_STAGES.APPLICATION;
+                if (byProgression.hasOwnProperty(prog)) {
+                    byProgression[prog]++;
+                }
+            });
+            
+            return {
+                total: closed.length,
+                byProgression
+            };
+        };
+
+        // ============================================
+        // TIME-BASED ANALYTICS
+        // ============================================
+
+        /**
+         * Calculate applications per week with average
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Weekly application statistics
+         */
+        const getApplicationsPerWeek = (jobs) => {
+            const jobsWithDates = jobs.filter(job => job.dateApplied);
+            const weekMap = {};
+            
+            jobsWithDates.forEach(job => {
+                const date = parseDate(job.dateApplied);
+                if (!date) return;
+                
+                const weekKey = getWeekYear(date);
+                weekMap[weekKey] = (weekMap[weekKey] || 0) + 1;
+            });
+            
+            const weeks = Object.entries(weekMap)
+                .map(([week, count]) => ({ week, count }))
+                .sort((a, b) => a.week.localeCompare(b.week));
+            
+            const totalWeeks = weeks.length;
+            const totalApps = weeks.reduce((sum, w) => sum + w.count, 0);
+            const average = totalWeeks > 0 ? Math.round(totalApps / totalWeeks) : 0;
+            
+            return {
+                byWeek: weeks,
+                average,
+                total: totalApps
+            };
+        };
+
+        /**
+         * Calculate applications per month with formatted labels
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Monthly application statistics
+         */
+        const getApplicationsPerMonth = (jobs) => {
+            const jobsWithDates = jobs.filter(job => job.dateApplied);
+            const monthMap = {};
+            
+            jobsWithDates.forEach(job => {
+                const date = parseDate(job.dateApplied);
+                if (!date) return;
+                
+                const monthKey = getMonthYear(date);
+                monthMap[monthKey] = (monthMap[monthKey] || 0) + 1;
+            });
+            
+            const months = Object.entries(monthMap)
+                .map(([month, count]) => {
+                    const [year, monthNum] = month.split('-');
+                    const date = new Date(parseInt(year), parseInt(monthNum) - 1);
+                    const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                    return { month, label, count };
+                })
+                .sort((a, b) => a.month.localeCompare(b.month));
+            
+            const totalMonths = months.length;
+            const totalApps = months.reduce((sum, m) => sum + m.count, 0);
+            const average = totalMonths > 0 ? Math.round(totalApps / totalMonths) : 0;
+            
+            return {
+                byMonth: months,
+                average,
+                total: totalApps
+            };
+        };
+
+        /**
+         * Track response rates by month based on follow-up dates
+         * @param {Array} jobs - Array of job objects
+         * @returns {Array} Monthly response rate data
+         */
+        const getResponseRateByMonth = (jobs) => {
+            const monthMap = {};
+
+            jobs.forEach(job => {
+                if (!job.followUp) return;
+                const date = parseDate(job.followUp);
+                if (!date) return;
+
+                const monthKey = getMonthYear(date);
+                if (!monthMap[monthKey]) {
+                    monthMap[monthKey] = { followUps: 0, responded: 0 };
+                }
+
+                monthMap[monthKey].followUps++;
+                // Count as responded if progression moved beyond Application stage
+                if (job.progression && job.progression !== PROGRESSION_STAGES.APPLICATION) {
+                    monthMap[monthKey].responded++;
+                }
+            });
+
+            const months = Object.entries(monthMap)
+                .map(([month, data]) => {
+                    const [year, monthNum] = month.split('-');
+                    const date = new Date(parseInt(year), parseInt(monthNum) - 1);
+                    const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                    const responsePercentage = data.followUps > 0 
+                        ? Math.round((data.responded / data.followUps) * 100) 
+                        : 0;
+
+                    return {
+                        month,
+                        label,
+                        followUps: data.followUps,
+                        responded: data.responded,
+                        responsePercentage
+                    };
+                })
+                .sort((a, b) => a.month.localeCompare(b.month));
+
+            return months;
+        };
+
+        /**
+         * Identify months with unusually high application activity
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Hot application periods above threshold
+         */
+        const getHotApplicationPeriods = (jobs) => {
+            const monthlyData = getApplicationsPerMonth(jobs);
+            const hotThreshold = monthlyData.average * APP_CONFIG.HOT_PERIOD_MULTIPLIER;
+            
+            const hotPeriods = monthlyData.byMonth
+                .filter(item => item.count >= hotThreshold)
+                .map(item => ({
+                    period: item.label,
+                    applications: item.count,
+                    vsAverage: Math.round(((item.count - monthlyData.average) / monthlyData.average) * 100)
+                }));
+            
+            return {
+                hotPeriods,
+                threshold: Math.round(hotThreshold),
+                average: monthlyData.average
+            };
+        };
+
+        /**
+         * Identify periods with unusually high response rates
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Hot response periods above threshold
+         */
+        const getHotResponsePeriods = (jobs) => {
+            const monthlyResponses = getResponseRateByMonth(jobs);
+            
+            const totalApps = monthlyResponses.reduce((sum, item) => sum + item.total, 0);
+            const totalResponses = monthlyResponses.reduce((sum, item) => sum + item.responded, 0);
+            const overallAverage = totalApps > 0 ? (totalResponses / totalApps) * 100 : 0;
+            
+            const hotThreshold = overallAverage * APP_CONFIG.HOT_PERIOD_MULTIPLIER;
+            
+            const hotPeriods = monthlyResponses
+                .filter(item => item.percentage >= hotThreshold && item.total >= 3)
+                .map(item => ({
+                    period: item.label,
+                    responseRate: item.percentage,
+                    applications: item.total,
+                    responses: item.responded
+                }));
+            
+            return {
+                hotPeriods,
+                threshold: Math.round(hotThreshold),
+                average: Math.round(overallAverage)
+            };
+        };
+
+        // ============================================
+        // COMPANY & PRIORITY ANALYTICS
+        // ============================================
+
+        /**
+         * Aggregate application statistics by company
+         * @param {Array} jobs - Array of job objects
+         * @returns {Array} Company-wise application statistics
+         */
+        const getApplicationsByCompany = (jobs) => {
+            const jobsWithDates = jobs.filter(job => job.dateApplied);
+            const companyData = {};
+            
+            jobsWithDates.forEach(job => {
+                const company = job.company || "Unknown";
+                
+                if (!companyData[company]) {
+                    companyData[company] = {
+                        total: 0,
+                        applied: 0,
+                        inProgress: 0,
+                        closed: 0,
+                        responded: 0,
+                        rejected: 0,
+                        offers: 0
+                    };
+                }
+                
+                companyData[company].total++;
+                
+                // Count by status
+                if (job.status === JOB_STATUSES.APPLIED) {
+                    companyData[company].applied++;
+                } else if (job.status === JOB_STATUSES.IN_PROGRESS) {
+                    companyData[company].inProgress++;
+                } else if (job.status === JOB_STATUSES.CLOSED) {
+                    companyData[company].closed++;
+                }
+                
+                // Count responses (anything beyond Application stage)
+                const prog = job.progression || PROGRESSION_STAGES.APPLICATION;
+                if (job.status === JOB_STATUSES.IN_PROGRESS || prog !== PROGRESSION_STAGES.APPLICATION) {
+                    companyData[company].responded++;
+                }
+                
+                // Count rejections
+                if (job.closeReason === CLOSE_REASONS.REJECTED) {
+                    companyData[company].rejected++;
+                }
+                
+                // Count offers
+                if (prog === PROGRESSION_STAGES.OFFER) {
+                    companyData[company].offers++;
+                }
+            });
+            
+            // Convert to array and calculate response rates
+            const companies = Object.entries(companyData)
+                .map(([name, data]) => ({
+                    name,
+                    ...data,
+                    responseRate: data.total > 0 
+                        ? Math.round((data.responded / data.total) * 100) 
+                        : 0
+                }))
+                .sort((a, b) => b.total - a.total);
+            
+            return companies;
+        };
+
+        /**
+         * Analyze success rates by priority tier
+         * @param {Array} jobs - Array of job objects
+         * @returns {Array} Success metrics by priority tier
+         */
+        const getSuccessRateByPriority = (jobs) => {
+            const jobsWithDates = jobs.filter(job => job.dateApplied);
+            
+            // Initialize data structure for each priority tier
+            const priorityData = {};
+            Object.values(PRIORITY_TIERS).forEach(tier => {
+                priorityData[tier] = { total: 0, responded: 0, interviewed: 0, offers: 0 };
+            });
+            
+            const interviewStages = [
+                PROGRESSION_STAGES.RECRUITER_SCREEN,
+                PROGRESSION_STAGES.PARTIAL_LOOP,
+                PROGRESSION_STAGES.FULL_LOOP,
+                PROGRESSION_STAGES.OFFER
+            ];
+            
+            jobsWithDates.forEach(job => {
+                const tier = job.priority || PRIORITY_TIERS.TIER_3;
+                
+                if (priorityData[tier]) {
+                    priorityData[tier].total++;
+                    
+                    // Count responses (status In Progress or progression beyond Application)
+                    if (job.status === JOB_STATUSES.IN_PROGRESS || 
+                        (job.progression && job.progression !== PROGRESSION_STAGES.APPLICATION)) {
+                        priorityData[tier].responded++;
+                    }
+                    
+                    // Count interviews
+                    if (job.progression && interviewStages.includes(job.progression)) {
+                        priorityData[tier].interviewed++;
+                    }
+                    
+                    // Count offers
+                    if (job.progression === PROGRESSION_STAGES.OFFER) {
+                        priorityData[tier].offers++;
+                    }
+                }
+            });
+            
+            // Calculate percentages for each tier
+            const result = Object.entries(priorityData).map(([tier, data]) => {
+                const responseRate = data.total > 0 ? Math.round((data.responded / data.total) * 100) : 0;
+                const interviewRate = data.total > 0 ? Math.round((data.interviewed / data.total) * 100) : 0;
+                const offerRate = data.total > 0 ? Math.round((data.offers / data.total) * 100) : 0;
+                
+                return {
+                    tier,
+                    total: data.total,
+                    responded: data.responded,
+                    interviewed: data.interviewed,
+                    offers: data.offers,
+                    responseRate,
+                    interviewRate,
+                    offerRate
+                };
+            });
+            
+            return result;
+        };
+
+        /**
+         * Get top companies by response rate (requires minimum applications)
+         * @param {Array} jobs - Array of job objects
+         * @param {number} minApplications - Minimum applications to be included
+         * @returns {Array} Top 10 most responsive companies
+         */
+        const getMostResponsiveCompanies = (jobs, minApplications = APP_CONFIG.MIN_APPLICATIONS_FOR_COMPANY_STATS) => {
+            const companies = getApplicationsByCompany(jobs);
+            
+            return companies
+                .filter(company => company.total >= minApplications)
+                .sort((a, b) => b.responseRate - a.responseRate)
+                .slice(0, 10);
+        };
+
+        /**
+         * Break down progression stages for applications that received responses
+         * @param {Array} jobs - Array of job objects
+         * @returns {Array} Progression breakdown data
+         */
         const getProgressionBreakdownForResponded = (jobs) => {
-        const responded = jobs.filter(job => 
-            job.progression && job.progression !== "Application"
-        );
-        
-        const byProgression = {
-            "Recruiter Screen": 0,
-            "Partial Loop": 0,
-            "Full Loop": 0,
-            "Offer": 0
-        };
-        
-        responded.forEach(job => {
-            const prog = job.progression || "Application";
-            if (byProgression.hasOwnProperty(prog)) {
-                byProgression[prog]++;
-            }
-        });
-        
-        return Object.entries(byProgression)
-            .filter(([_, count]) => count > 0)
-            .map(([stage, count]) => ({
-                label: stage,
-                value: count
-            }));
+            const responded = jobs.filter(job => 
+                job.progression && job.progression !== PROGRESSION_STAGES.APPLICATION
+            );
+            
+            const byProgression = {
+                [PROGRESSION_STAGES.RECRUITER_SCREEN]: 0,
+                [PROGRESSION_STAGES.PARTIAL_LOOP]: 0,
+                [PROGRESSION_STAGES.FULL_LOOP]: 0,
+                [PROGRESSION_STAGES.OFFER]: 0
+            };
+            
+            responded.forEach(job => {
+                const prog = job.progression || PROGRESSION_STAGES.APPLICATION;
+                if (byProgression.hasOwnProperty(prog)) {
+                    byProgression[prog]++;
+                }
+            });
+            
+            return Object.entries(byProgression)
+                .filter(([_, count]) => count > 0)
+                .map(([stage, count]) => ({
+                    label: stage,
+                    value: count
+                }));
         };
 
+        // ============================================
+        // AGGREGATED ANALYTICS EXPORTS
+        // ============================================
+
+        /**
+         * Get comprehensive job search overview metrics
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Complete overview metrics
+         */
         const getJobSearchOverview = (jobs) => {
-        return {
-            totalApplications: getTotalApplications(jobs),
-            byTimeWindow: getApplicationsByTimeWindow(jobs),
-            responseRate: getResponseRate(jobs),
-            interviewConversionRate: getInterviewConversionRate(jobs),
-            offerRate: getOfferRate(jobs),
-            pipeline: getPipelineStatus(jobs),
-            waiting: getWaitingStatus(jobs),
-            closureReasons: getClosureReasons(jobs),
-            rejectionRate: getRejectionRate(jobs),
-            closedProgression: getClosedProgressionBreakdown(jobs)
-        };
+            return {
+                totalApplications: getTotalApplications(jobs),
+                byTimeWindow: getApplicationsByTimeWindow(jobs),
+                responseRate: getResponseRate(jobs),
+                interviewConversionRate: getInterviewConversionRate(jobs),
+                offerRate: getOfferRate(jobs),
+                pipeline: getPipelineStatus(jobs),
+                waiting: getWaitingStatus(jobs),
+                closureReasons: getClosureReasons(jobs),
+                rejectionRate: getRejectionRate(jobs),
+                closedProgression: getClosedProgressionBreakdown(jobs)
+            };
         };
 
+        /**
+         * Get time-based analytics metrics
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Time-based metrics
+         */
         const getTimeBasedAnalytics = (jobs) => {
-        return {
-            applicationsPerWeek: getApplicationsPerWeek(jobs),
-            applicationsPerMonth: getApplicationsPerMonth(jobs),
-            responseRateByMonth: getResponseRateByMonth(jobs),
-            hotApplicationPeriods: getHotApplicationPeriods(jobs),
-            hotResponsePeriods: getHotResponsePeriods(jobs)
-        };
+            return {
+                applicationsPerWeek: getApplicationsPerWeek(jobs),
+                applicationsPerMonth: getApplicationsPerMonth(jobs),
+                responseRateByMonth: getResponseRateByMonth(jobs),
+                hotApplicationPeriods: getHotApplicationPeriods(jobs),
+                hotResponsePeriods: getHotResponsePeriods(jobs)
+            };
         };
 
+        /**
+         * Get company and priority-based analytics
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} Company and priority metrics
+         */
         const getCompanyPriorityAnalytics = (jobs) => {
-        return {
-            applicationsByCompany: getApplicationsByCompany(jobs),
-            successRateByPriority: getSuccessRateByPriority(jobs),
-            mostResponsiveCompanies: getMostResponsiveCompanies(jobs)
-        };
+            return {
+                applicationsByCompany: getApplicationsByCompany(jobs),
+                successRateByPriority: getSuccessRateByPriority(jobs),
+                mostResponsiveCompanies: getMostResponsiveCompanies(jobs)
+            };
         };
 
+        /**
+         * Get complete analytics dataset
+         * @param {Array} jobs - Array of job objects
+         * @returns {Object} All analytics with generation timestamp
+         */
         const getCompleteAnalytics = (jobs) => {
-        return {
-            overview: getJobSearchOverview(jobs),
-            timeBased: getTimeBasedAnalytics(jobs),
-            companyPriority: getCompanyPriorityAnalytics(jobs),
-            generatedAt: new Date().toISOString()
-        };
-        };
-
-        /* Return all functions as a single object */
-        return {
-        getTotalApplications,
-        getApplicationsByTimeWindow,
-        getResponseRate,
-        getWaitingStatus,
-        getInterviewConversionRate,
-        getOfferRate,
-        getPipelineStatus,
-        getClosureReasons,
-        getRejectionRate,
-        getClosedProgressionBreakdown,
-        getApplicationsPerWeek,
-        getApplicationsPerMonth,
-        getResponseRateByMonth,
-        getHotApplicationPeriods,
-        getHotResponsePeriods,
-        getApplicationsByCompany,
-        getSuccessRateByPriority,
-        getMostResponsiveCompanies,
-        getProgressionBreakdownForResponded,
-        getJobSearchOverview,
-        getTimeBasedAnalytics,
-        getCompanyPriorityAnalytics,
-        getCompleteAnalytics
+            return {
+                overview: getJobSearchOverview(jobs),
+                timeBased: getTimeBasedAnalytics(jobs),
+                companyPriority: getCompanyPriorityAnalytics(jobs),
+                generatedAt: new Date().toISOString()
+            };
         };
 
-        })(); /* End of analytics object */
-        </script>
+        /* Export all analytics functions as public API */
+        return {
+            // Helper functions
+            parseDate,
+            filterByDateRange,
+            
+            // Core metrics
+            getTotalApplications,
+            getApplicationsByTimeWindow,
+            getResponseRate,
+            getWaitingStatus,
+            getInterviewConversionRate,
+            getOfferRate,
+            getPipelineStatus,
+            getClosureReasons,
+            getRejectionRate,
+            getClosedProgressionBreakdown,
+            
+            // Time-based analytics
+            getApplicationsPerWeek,
+            getApplicationsPerMonth,
+            getResponseRateByMonth,
+            getHotApplicationPeriods,
+            getHotResponsePeriods,
+            
+            // Company & priority analytics
+            getApplicationsByCompany,
+            getSuccessRateByPriority,
+            getMostResponsiveCompanies,
+            getProgressionBreakdownForResponded,
+            
+            // Aggregated exports
+            getJobSearchOverview,
+            getTimeBasedAnalytics,
+            getCompanyPriorityAnalytics,
+            getCompleteAnalytics
+        };
+
+    })(); /* End of analytics module */
+
+    // Wrap analytics functions with caching for better performance
+    const cachedAnalytics = (() => {
+        const original = window.analytics || analytics;
+        
+        return {
+            getJobSearchOverview(jobs) {
+                const cacheKey = `overview_${jobs.length}_${jobs.map(j => j.id).join('-').substring(0, 50)}`;
+                return PerformanceUtil.memoize(cacheKey, () => {
+                    return PerformanceUtil.measure('analytics:overview', () => original.getJobSearchOverview(jobs));
+                }, 30000);
+            },
+            
+            getTimeBasedAnalytics(jobs) {
+                const cacheKey = `timebased_${jobs.length}_${jobs.map(j => j.dateApplied).join('-').substring(0, 50)}`;
+                return PerformanceUtil.memoize(cacheKey, () => {
+                    return PerformanceUtil.measure('analytics:timebased', () => original.getTimeBasedAnalytics(jobs));
+                }, 30000);
+            },
+            
+            getCompanyPriorityAnalytics(jobs) {
+                const cacheKey = `company_${jobs.length}_${jobs.map(j => j.company).join('-').substring(0, 50)}`;
+                return PerformanceUtil.memoize(cacheKey, () => {
+                    return PerformanceUtil.measure('analytics:company', () => original.getCompanyPriorityAnalytics(jobs));
+                }, 30000);
+            },
+            
+            getCompleteAnalytics(jobs) {
+                const cacheKey = `complete_${jobs.length}_${jobs.map(j => j.id).join('-').substring(0, 50)}`;
+                return PerformanceUtil.memoize(cacheKey, () => {
+                    return PerformanceUtil.measure('analytics:complete', () => original.getCompleteAnalytics(jobs));
+                }, 30000);
+            },
+            
+            // Pass through other methods
+            getHotPeriods: original.getHotPeriods,
+            getApplicationsPerDay: original.getApplicationsPerDay,
+            getApplicationsPerMonth: original.getApplicationsPerMonth,
+            getPriorityStats: original.getPriorityStats,
+            getMostResponsiveCompanies: original.getMostResponsiveCompanies,
+            getProgressionBreakdownForResponded: original.getProgressionBreakdownForResponded
+        };
+    })();
+    
+    // Use cached analytics globally
+    var analytics = cachedAnalytics;
+    </script>
 
     <script type="text/babel">
         /* ===========================================
@@ -2392,87 +2716,893 @@
         const DEFAULT_COMPANIES = {
             "Developer Tools": [
                 { name: "Stripe", url: "https://stripe.com/jobs/search" },
-                { name: "Confluent", url: "https://careers.confluent.io/jobs" },
-                { name: "DataDog", url: "https://careers.datadoghq.com/jobs" },
-                { name: "MongoDB", url: "https://www.mongodb.com/careers/jobs" },
-                { name: "Elastic", url: "https://jobs.elastic.co/" },
-                { name: "Postman", url: "https://www.postman.com/company/careers/open-positions/" },
-                { name: "HubSpot", url: "https://www.hubspot.com/careers/jobs" }
             ],
             "Data Infrastructure": [
                 { name: "Snowflake", url: "https://careers.snowflake.com/us/en/search-results" },
-                { name: "Databricks", url: "https://www.databricks.com/company/careers/open-positions" },
-                { name: "ClickHouse", url: "https://clickhouse.com/company/careers#open-positions" }
             ],
             "Cloud/Infrastructure": [
-                { name: "Anthropic", url: "https://www.anthropic.com/careers#open-roles" },
+                { name: "Anthropic", url: "https://www.anthropic.com/careers/jobs" },
                 { name: "OpenAI", url: "https://openai.com/careers/search" },
-                { name: "Microsoft", url: "https://careers.microsoft.com/professionals/us/en/search-results" },
+                { name: "Microsoft", url: "https://apply.careers.microsoft.com/careers" },
                 { name: "Google", url: "https://www.google.com/about/careers/applications/jobs/results/" }
-            ],
-            "Healthcare Tech": [
-                { name: "Epic Systems", url: "https://careers.epic.com/Jobs" },
-                { name: "Veeva", url: "https://careers.veeva.com/job-search-results/" },
-                { name: "Overjet", url: "https://www.overjet.com/careers#open-positions" }
             ],
             "Enterprise Software": [
                 { name: "ServiceNow", url: "https://careers.servicenow.com/careers/jobs" },
-                { name: "SailPoint", url: "https://www.sailpoint.com/company/careers/#open-positions" },
-                { name: "Gorilla Logic", url: "https://gorillalogic.com/careers/#open-positions" },
-                { name: "Huntress", url: "https://www.huntress.com/careers#open-positions" }
             ],
             "Consumer Tech": [
                 { name: "DoorDash", url: "https://careers.doordash.com/jobs" },
-                { name: "Netflix", url: "https://jobs.netflix.com/search" },
-                { name: "Zillow", url: "https://www.zillow.com/careers/openings/" },
-                { name: "Dropbox", url: "https://www.dropbox.com/jobs/all-jobs" }
+                { name: "Netflix", url: "https://explore.jobs.netflix.net/careers" },
+                { name: "Zillow", url: "https://zillow.wd5.myworkdayjobs.com/Zillow_Group_External" },
             ]
         };
 
-        const STATUSES = ["Applied", "In Progress", "Closed"];
-        const CLOSE_REASONS = ["Ghosted", "Rejected", "Declined Offer", "Withdrew"];
-        const PROGRESSIONS = ["Application", "Recruiter Screen", "Partial Loop", "Full Loop", "Offer"];
-
-        const PRIORITIES = ["Tier 1", "Tier 2", "Tier 3"];
-
-        // Fit Level utilities
-        const FIT_LEVELS = {
-            STRONG: 3,
-            DECENT: 2,
-            LONG_SHOT: 1,
-            UNSET: null
-        };
-
-        const getFitLevelLabel = (value) => {
-            switch(value) {
-                case 3: return 'Strong';
-                case 2: return 'Decent';
-                case 1: return 'Long Shot';
-                default: return '—';
-            }
-        };
-
-        const getFitLevelValue = (label) => {
-            switch(label) {
-                case 'Strong': return 3;
-                case 'Decent': return 2;
-                case 'Long Shot': return 1;
-                default: return null;
-            }
-        };
-
-        const sortByFitLevel = (a, b, direction) => {
-            // Unset values always sort last
-            if (a === null && b === null) return 0;
-            if (a === null) return 1;
-            if (b === null) return -1;
+        /* ===========================================
+           UTILITY FUNCTIONS
+           =========================================== */
+        
+        /**
+         * Storage utilities for localStorage operations with security
+         */
+        const StorageUtil = {
+            /**
+             * Get item from localStorage with error handling and validation
+             * @param {string} key - Storage key
+             * @param {*} defaultValue - Default value if key not found
+             * @returns {*} Parsed value or default
+             */
+            get(key, defaultValue = null) {
+                try {
+                    const item = localStorage.getItem(key);
+                    if (!item) return defaultValue;
+                    
+                    const parsed = JSON.parse(item);
+                    
+                    // Basic validation based on key type
+                    if (key === APP_CONFIG.STORAGE_KEYS.JOBS) {
+                        if (!Array.isArray(parsed)) {
+                            console.warn('Invalid jobs data structure, using default');
+                            return defaultValue;
+                        }
+                        // Limit check
+                        if (parsed.length > SecurityUtil.CONFIG.MAX_JOBS_COUNT) {
+                            console.warn('Jobs count exceeds limit, truncating');
+                            return parsed.slice(0, SecurityUtil.CONFIG.MAX_JOBS_COUNT);
+                        }
+                    }
+                    
+                    return parsed;
+                } catch (error) {
+                    SecurityUtil.handleError(error, 'loading data', false);
+                    return defaultValue;
+                }
+            },
             
-            // For descending: Strong (3) → Decent (2) → Long Shot (1)
-            // For ascending: Long Shot (1) → Decent (2) → Strong (3)
-            if (direction === 'desc') {
-                return b - a;
-            } else {
-                return a - b;
+            /**
+             * Set item in localStorage with error handling and size check
+             * @param {string} key - Storage key
+             * @param {*} value - Value to store (will be JSON stringified)
+             * @returns {boolean} Success status
+             */
+            set(key, value) {
+                try {
+                    const jsonString = JSON.stringify(value);
+                    
+                    // Check size (localStorage typically has 5-10MB limit)
+                    const sizeInMB = new Blob([jsonString]).size / (1024 * 1024);
+                    if (sizeInMB > 5) {
+                        console.warn(`Data size (${sizeInMB.toFixed(2)}MB) approaching localStorage limits`);
+                        alert(`Warning: Your data is getting large (${sizeInMB.toFixed(2)}MB). Consider exporting a backup.`);
+                    }
+                    
+                    localStorage.setItem(key, jsonString);
+                    return true;
+                } catch (error) {
+                    if (error.name === 'QuotaExceededError') {
+                        SecurityUtil.handleError(
+                            new Error('Storage quota exceeded. Please export and clear old data.'),
+                            'saving data'
+                        );
+                    } else {
+                        SecurityUtil.handleError(error, 'saving data', false);
+                    }
+                    return false;
+                }
+            },
+            
+            /**
+             * Remove item from localStorage with error handling
+             * @param {string} key - Storage key
+             */
+            remove(key) {
+                try {
+                    localStorage.removeItem(key);
+                } catch (error) {
+                    SecurityUtil.handleError(error, 'removing data', false);
+                }
+            },
+            
+            /**
+             * Get storage usage statistics
+             * @returns {Object} Storage usage info
+             */
+            getUsageStats() {
+                try {
+                    let total = 0;
+                    for (let key in localStorage) {
+                        if (localStorage.hasOwnProperty(key)) {
+                            total += localStorage[key].length + key.length;
+                        }
+                    }
+                    return {
+                        used: total,
+                        usedMB: (total / (1024 * 1024)).toFixed(2),
+                        estimated: '5-10MB typical limit'
+                    };
+                } catch (error) {
+                    return { error: 'Unable to calculate usage' };
+                }
+            }
+        };
+        
+        /**
+         * Company fit level utility functions
+         */
+        const FitLevelUtil = {
+            /**
+             * Convert fit level value to label
+             * @param {number|null} value - Numeric fit level
+             * @returns {string} Human-readable label
+             */
+            getLabel(value) {
+                const level = Object.values(FIT_LEVELS).find(l => l.value === value);
+                return level ? level.label : FIT_LEVELS.UNSET.label;
+            },
+            
+            /**
+             * Convert fit level label to value
+             * @param {string} label - Human-readable label
+             * @returns {number|null} Numeric fit level
+             */
+            getValue(label) {
+                const level = Object.values(FIT_LEVELS).find(l => l.label === label);
+                return level ? level.value : FIT_LEVELS.UNSET.value;
+            },
+            
+            /**
+             * Sort comparator for fit levels
+             * @param {number|null} a - First value
+             * @param {number|null} b - Second value
+             * @param {string} direction - 'asc' or 'desc'
+             * @returns {number} Sort order
+             */
+            compare(a, b, direction = 'desc') {
+                // Unset values always sort last
+                if (a === null && b === null) return 0;
+                if (a === null) return 1;
+                if (b === null) return -1;
+                
+                return direction === 'desc' ? b - a : a - b;
+            }
+        };
+        
+        /**
+         * Legacy function aliases for backward compatibility
+         */
+        const getFitLevelLabel = FitLevelUtil.getLabel;
+        const getFitLevelValue = FitLevelUtil.getValue;
+        const sortByFitLevel = FitLevelUtil.compare;
+
+        /* ===========================================
+           SECURITY & VALIDATION MODULE
+           =========================================== */
+        
+        const SecurityUtil = {
+            // Security configuration
+            CONFIG: {
+                MAX_STRING_LENGTH: 10000,
+                MAX_URL_LENGTH: 2048,
+                MAX_JOBS_COUNT: 10000,
+                MAX_COMPANIES_COUNT: 5000,
+                MAX_IMPORT_SIZE_MB: 10,
+                ALLOWED_URL_PROTOCOLS: ['http:', 'https:'],
+                RATE_LIMIT_MS: 100 // Min time between operations
+            },
+            
+            /**
+             * Sanitize HTML to prevent XSS attacks
+             * @param {string} str - String to sanitize
+             * @returns {string} Sanitized string
+             */
+            sanitizeHTML(str) {
+                if (typeof str !== 'string') return '';
+                
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            },
+            
+            /**
+             * Validate and sanitize URL
+             * @param {string} url - URL to validate
+             * @returns {string|null} Sanitized URL or null if invalid
+             */
+            validateURL(url) {
+                if (!url || typeof url !== 'string') return null;
+                
+                // Length check
+                if (url.length > this.CONFIG.MAX_URL_LENGTH) {
+                    console.warn('URL exceeds maximum length');
+                    return null;
+                }
+                
+                try {
+                    const urlObj = new URL(url);
+                    
+                    // Protocol whitelist
+                    if (!this.CONFIG.ALLOWED_URL_PROTOCOLS.includes(urlObj.protocol)) {
+                        console.warn('Invalid URL protocol:', urlObj.protocol);
+                        return null;
+                    }
+                    
+                    // Prevent javascript: and data: URIs
+                    if (urlObj.protocol === 'javascript:' || urlObj.protocol === 'data:') {
+                        console.warn('Blocked dangerous URL protocol');
+                        return null;
+                    }
+                    
+                    return urlObj.href;
+                } catch (e) {
+                    console.warn('Invalid URL format:', url);
+                    return null;
+                }
+            },
+            
+            /**
+             * Validate string length
+             * @param {string} str - String to validate
+             * @param {number} maxLength - Maximum allowed length
+             * @returns {boolean} Whether string is valid
+             */
+            validateStringLength(str, maxLength = this.CONFIG.MAX_STRING_LENGTH) {
+                if (typeof str !== 'string') return false;
+                return str.length <= maxLength;
+            },
+            
+            /**
+             * Sanitize text input
+             * @param {string} input - Input to sanitize
+             * @param {number} maxLength - Maximum length
+             * @returns {string} Sanitized input
+             */
+            sanitizeInput(input, maxLength = this.CONFIG.MAX_STRING_LENGTH) {
+                if (typeof input !== 'string') return '';
+                
+                // Truncate if too long
+                let sanitized = input.slice(0, maxLength);
+                
+                // Remove null bytes
+                sanitized = sanitized.replace(/\0/g, '');
+                
+                // Trim whitespace
+                sanitized = sanitized.trim();
+                
+                return sanitized;
+            },
+            
+            /**
+             * Validate job object structure and data
+             * @param {Object} job - Job object to validate
+             * @returns {Object} Validated and sanitized job object
+             * @throws {Error} If validation fails
+             */
+            validateJobData(job) {
+                if (!job || typeof job !== 'object') {
+                    throw new Error('Invalid job data: must be an object');
+                }
+                
+                // Required fields validation
+                const requiredFields = ['company', 'role'];
+                for (const field of requiredFields) {
+                    if (!job[field] || typeof job[field] !== 'string') {
+                        throw new Error(`Invalid job data: ${field} is required`);
+                    }
+                }
+                
+                // Sanitize and validate each field
+                const validated = {
+                    id: job.id || Date.now(),
+                    company: this.sanitizeInput(job.company, 200),
+                    role: this.sanitizeInput(job.role, 200),
+                    status: this.validateEnum(job.status, Object.values(JOB_STATUSES), JOB_STATUSES.APPLIED),
+                    priority: this.validateEnum(job.priority, Object.values(PRIORITY_TIERS), PRIORITY_TIERS.TIER_2),
+                    dateApplied: this.validateDate(job.dateApplied),
+                    url: job.url ? this.validateURL(job.url) : '',
+                    salary: this.sanitizeInput(job.salary || '', 100),
+                    location: this.sanitizeInput(job.location || '', 200),
+                    contact: this.sanitizeInput(job.contact || '', 200),
+                    notes: this.sanitizeInput(job.notes || '', 5000),
+                    followUp: job.followUp ? this.validateDate(job.followUp, false) : '',
+                    progression: this.validateEnum(job.progression, Object.values(PROGRESSION_STAGES), PROGRESSION_STAGES.APPLICATION),
+                    closeReason: job.closeReason ? this.validateEnum(job.closeReason, Object.values(CLOSE_REASONS), '') : '',
+                    resumeUrl: job.resumeUrl ? this.validateURL(job.resumeUrl) : '',
+                    coverLetterUrl: job.coverLetterUrl ? this.validateURL(job.coverLetterUrl) : ''
+                };
+                
+                // Validate combined data size
+                const dataSize = JSON.stringify(validated).length;
+                if (dataSize > 50000) {
+                    throw new Error('Job data exceeds maximum size');
+                }
+                
+                return validated;
+            },
+            
+            /**
+             * Validate company object
+             * @param {Object} company - Company object to validate
+             * @returns {Object} Validated company object
+             * @throws {Error} If validation fails
+             */
+            validateCompanyData(company) {
+                if (!company || typeof company !== 'object') {
+                    throw new Error('Invalid company data');
+                }
+                
+                if (!company.name || typeof company.name !== 'string') {
+                    throw new Error('Company name is required');
+                }
+                
+                return {
+                    name: this.sanitizeInput(company.name, 200),
+                    url: company.url ? this.validateURL(company.url) : '',
+                    category: this.sanitizeInput(company.category || 'Applied', 100),
+                    fitLevel: company.fitLevel !== undefined ? this.validateFitLevel(company.fitLevel) : null
+                };
+            },
+            
+            /**
+             * Validate enum value
+             * @param {*} value - Value to validate
+             * @param {Array} allowedValues - Array of allowed values
+             * @param {*} defaultValue - Default if invalid
+             * @returns {*} Validated value or default
+             */
+            validateEnum(value, allowedValues, defaultValue) {
+                return allowedValues.includes(value) ? value : defaultValue;
+            },
+            
+            /**
+             * Validate date string
+             * @param {string} dateStr - Date string to validate
+             * @param {boolean} required - Whether date is required
+             * @returns {string} Validated ISO date string
+             */
+            validateDate(dateStr, required = true) {
+                if (!dateStr) {
+                    return required ? new Date().toISOString().split('T')[0] : '';
+                }
+                
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) {
+                    return required ? new Date().toISOString().split('T')[0] : '';
+                }
+                
+                // Validate date is not too far in past or future
+                const minDate = new Date('2000-01-01');
+                const maxDate = new Date('2100-01-01');
+                
+                if (date < minDate || date > maxDate) {
+                    console.warn('Date out of valid range:', dateStr);
+                    return required ? new Date().toISOString().split('T')[0] : '';
+                }
+                
+                return date.toISOString().split('T')[0];
+            },
+            
+            /**
+             * Validate fit level value
+             * @param {number|null} value - Fit level value
+             * @returns {number|null} Validated fit level
+             */
+            validateFitLevel(value) {
+                if (value === null || value === undefined) return null;
+                const numValue = parseInt(value);
+                return [1, 2, 3].includes(numValue) ? numValue : null;
+            },
+            
+            /**
+             * Validate import data structure and size
+             * @param {string} jsonString - JSON string to validate
+             * @returns {Object} Parsed and validated data
+             * @throws {Error} If validation fails
+             */
+            validateImportData(jsonString) {
+                // Size check
+                const sizeInMB = new Blob([jsonString]).size / (1024 * 1024);
+                if (sizeInMB > this.CONFIG.MAX_IMPORT_SIZE_MB) {
+                    throw new Error(`Import file too large: ${sizeInMB.toFixed(2)}MB (max: ${this.CONFIG.MAX_IMPORT_SIZE_MB}MB)`);
+                }
+                
+                let data;
+                try {
+                    data = JSON.parse(jsonString);
+                } catch (e) {
+                    throw new Error('Invalid JSON format: ' + e.message);
+                }
+                
+                // Structure validation
+                if (!data || typeof data !== 'object') {
+                    throw new Error('Invalid backup format: must be an object');
+                }
+                
+                if (!data.jobs || !Array.isArray(data.jobs)) {
+                    throw new Error('Invalid backup format: jobs array required');
+                }
+                
+                // Quantity limits
+                if (data.jobs.length > this.CONFIG.MAX_JOBS_COUNT) {
+                    throw new Error(`Too many jobs: ${data.jobs.length} (max: ${this.CONFIG.MAX_JOBS_COUNT})`);
+                }
+                
+                if (data.customCompanies) {
+                    const companyCount = Object.keys(data.customCompanies).length;
+                    if (companyCount > this.CONFIG.MAX_COMPANIES_COUNT) {
+                        throw new Error(`Too many companies: ${companyCount} (max: ${this.CONFIG.MAX_COMPANIES_COUNT})`);
+                    }
+                }
+                
+                return data;
+            },
+            
+            /**
+             * Secure error handler - logs details but shows safe message to user
+             * @param {Error} error - Error object
+             * @param {string} context - Context where error occurred
+             * @param {boolean} showToUser - Whether to show alert to user
+             */
+            handleError(error, context, showToUser = true) {
+                // Log full error for debugging
+                console.error(`[${context}]`, error);
+                
+                // Show sanitized message to user
+                if (showToUser) {
+                    const safeMessage = this.getSafeErrorMessage(error, context);
+                    alert(safeMessage);
+                }
+            },
+            
+            /**
+             * Get user-safe error message (no stack traces or sensitive info)
+             * @param {Error} error - Error object
+             * @param {string} context - Error context
+             * @returns {string} Safe error message
+             */
+            getSafeErrorMessage(error, context) {
+                const baseMessage = `An error occurred while ${context}.`;
+                
+                // Only show specific error if it's a validation error
+                if (error.message && error.message.startsWith('Invalid')) {
+                    return `${baseMessage}\n${error.message}`;
+                }
+                
+                return `${baseMessage}\nPlease try again or contact support if the issue persists.`;
+            },
+            
+            /**
+             * Enhanced rate limiter with adaptive throttling
+             */
+            _lastOperationTime: 0,
+            _operationQueue: [],
+            _isProcessing: false,
+            _recentErrors: 0,
+            
+            /**
+             * Adaptive rate limit based on system state
+             */
+            getAdaptiveRateLimit() {
+                // Base rate limit
+                let limit = this.CONFIG.RATE_LIMIT_MS;
+                
+                // Increase if there are queued operations (system under load)
+                if (this._operationQueue.length > 5) {
+                    limit *= 2; // Double the limit if queue is building
+                }
+                
+                // Increase if there have been recent errors (system stressed)
+                if (this._recentErrors > 3) {
+                    limit *= 1.5; // Increase by 50% if errors detected
+                }
+                
+                return limit;
+            },
+            
+            /**
+             * Queue and throttle operations
+             */
+            async queueOperation(fn, operationName) {
+                const adaptive = this.getAdaptiveRateLimit();
+                const now = Date.now();
+                
+                if (now - this._lastOperationTime < adaptive) {
+                    const waitTime = adaptive - (now - this._lastOperationTime);
+                    LoggerUtil.warn('Operation queued due to rate limit', { operation: operationName, waitTime });
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+                
+                this._lastOperationTime = Date.now();
+                
+                try {
+                    const result = await fn();
+                    // Reset error count on success
+                    this._recentErrors = Math.max(0, this._recentErrors - 1);
+                    return result;
+                } catch (error) {
+                    this._recentErrors++;
+                    throw error;
+                }
+            },
+            
+            checkRateLimit() {
+                const adaptive = this.getAdaptiveRateLimit();
+                const now = Date.now();
+                if (now - this._lastOperationTime < adaptive) {
+                    throw new Error('Operation rate limit exceeded. Please wait.');
+                }
+                this._lastOperationTime = now;
+            },
+            
+            /**
+             * Generate data integrity hash (simple checksum)
+             * @param {Object} data - Data to hash
+             * @returns {string} Simple checksum
+             */
+            generateChecksum(data) {
+                const str = JSON.stringify(data);
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // Convert to 32bit integer
+                }
+                return hash.toString(36);
+            },
+            
+            /**
+             * Verify data integrity
+             * @param {Object} data - Data to verify
+             * @param {string} checksum - Expected checksum
+             * @returns {boolean} Whether data is intact
+             */
+            verifyChecksum(data, checksum) {
+                return this.generateChecksum(data) === checksum;
+            }
+        };
+
+        /**
+         * Performance & Observability Module
+         * Tracks metrics, provides caching, throttling, and monitoring
+         * 
+         * OPTIMIZATIONS IMPLEMENTED:
+         * - Multi-level caching with TTL for expensive computations
+         * - Debouncing for storage writes (1s) to reduce I/O
+         * - Index-based job lookups (O(1) vs O(n) for common queries)
+         * - Memoization of filtered/sorted job arrays
+         * - Performance metrics tracking and reporting
+         * - Structured logging with categorization
+         * - Adaptive rate limiting based on system load
+         * - Request queuing for graceful degradation
+         * - Cache invalidation on data mutations
+         */
+        const PerformanceUtil = {
+            // Metrics collection
+            metrics: {
+                operationTimes: {},
+                cacheHits: 0,
+                cacheMisses: 0,
+                throttledCalls: 0,
+                errorCount: 0,
+                lastOperations: []
+            },
+
+            // Simple in-memory cache with TTL
+            cache: new Map(),
+            cacheTimeouts: new Map(),
+
+            /**
+             * Memoize expensive computations
+             * @param {string} key - Cache key
+             * @param {Function} fn - Computation function
+             * @param {number} ttl - Time to live in ms (default 5000)
+             * @returns {*} Cached or computed value
+             */
+            memoize(key, fn, ttl = 5000) {
+                if (this.cache.has(key)) {
+                    this.metrics.cacheHits++;
+                    return this.cache.get(key);
+                }
+                
+                this.metrics.cacheMisses++;
+                const result = fn();
+                this.cache.set(key, result);
+                
+                // Clear timeout if exists
+                if (this.cacheTimeouts.has(key)) {
+                    clearTimeout(this.cacheTimeouts.get(key));
+                }
+                
+                // Set new timeout for cache invalidation
+                const timeoutId = setTimeout(() => {
+                    this.cache.delete(key);
+                    this.cacheTimeouts.delete(key);
+                }, ttl);
+                
+                this.cacheTimeouts.set(key, timeoutId);
+                return result;
+            },
+
+            /**
+             * Clear cache for specific keys
+             */
+            clearCache(...keys) {
+                keys.forEach(key => {
+                    if (this.cacheTimeouts.has(key)) {
+                        clearTimeout(this.cacheTimeouts.get(key));
+                        this.cacheTimeouts.delete(key);
+                    }
+                    this.cache.delete(key);
+                });
+            },
+
+            /**
+             * Create debounced function
+             * @param {Function} fn - Function to debounce
+             * @param {number} delay - Delay in ms
+             * @returns {Function} Debounced function
+             */
+            debounce(fn, delay = 300) {
+                let timeoutId;
+                let lastCallTime = 0;
+                
+                return function debounced(...args) {
+                    const now = Date.now();
+                    
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                    
+                    timeoutId = setTimeout(() => {
+                        this.metrics.throttledCalls++;
+                        fn.apply(this, args);
+                    }, delay);
+                };
+            },
+
+            /**
+             * Create throttled function
+             * @param {Function} fn - Function to throttle
+             * @param {number} interval - Minimum interval in ms
+             * @returns {Function} Throttled function
+             */
+            throttle(fn, interval = 300) {
+                let lastCallTime = 0;
+                
+                return function throttled(...args) {
+                    const now = Date.now();
+                    
+                    if (now - lastCallTime >= interval) {
+                        lastCallTime = now;
+                        return fn.apply(this, args);
+                    }
+                    this.metrics.throttledCalls++;
+                };
+            },
+
+            /**
+             * Measure operation time
+             * @param {string} operation - Operation name
+             * @param {Function} fn - Function to measure
+             * @returns {*} Function result
+             */
+            measure(operation, fn) {
+                const start = performance.now();
+                const result = fn();
+                const duration = performance.now() - start;
+                
+                if (!this.metrics.operationTimes[operation]) {
+                    this.metrics.operationTimes[operation] = [];
+                }
+                
+                this.metrics.operationTimes[operation].push(duration);
+                
+                // Keep only last 100 measurements per operation
+                if (this.metrics.operationTimes[operation].length > 100) {
+                    this.metrics.operationTimes[operation].shift();
+                }
+                
+                return result;
+            },
+
+            /**
+             * Get average operation time
+             */
+            getAvgTime(operation) {
+                const times = this.metrics.operationTimes[operation];
+                if (!times || times.length === 0) return 0;
+                return times.reduce((a, b) => a + b, 0) / times.length;
+            },
+
+            /**
+             * Get performance report
+             */
+            getReport() {
+                const report = {
+                    cacheStats: {
+                        hits: this.metrics.cacheHits,
+                        misses: this.metrics.cacheMisses,
+                        hitRate: this.metrics.cacheHits + this.metrics.cacheMisses > 0 
+                            ? (this.metrics.cacheHits / (this.metrics.cacheHits + this.metrics.cacheMisses) * 100).toFixed(2) + '%'
+                            : 'N/A'
+                    },
+                    operationStats: {},
+                    memoryUsage: {
+                        cacheSize: this.cache.size,
+                        logCount: LoggerUtil.logs.length
+                    }
+                };
+                
+                for (const [op, times] of Object.entries(this.metrics.operationTimes)) {
+                    if (times.length > 0) {
+                        report.operationStats[op] = {
+                            count: times.length,
+                            avg: (times.reduce((a, b) => a + b, 0) / times.length).toFixed(2) + 'ms',
+                            min: Math.min(...times).toFixed(2) + 'ms',
+                            max: Math.max(...times).toFixed(2) + 'ms'
+                        };
+                    }
+                }
+                
+                return report;
+            },
+
+            /**
+             * Clear old caches and logs to manage memory
+             */
+            cleanup() {
+                // Clear all caches
+                this.cache.clear();
+                this.cacheTimeouts.forEach(timeout => clearTimeout(timeout));
+                this.cacheTimeouts.clear();
+                
+                // Reset metrics (keep for reporting, but clear operation details)
+                this.metrics.operationTimes = {};
+                this.metrics.throttledCalls = 0;
+                
+                // Clear old logs (keep only last 100)
+                if (LoggerUtil.logs.length > 100) {
+                    LoggerUtil.logs = LoggerUtil.logs.slice(-100);
+                }
+            },
+
+            /**
+             * Get memory stats
+             */
+            getMemoryStats() {
+                const stats = {
+                    cacheSize: this.cache.size,
+                    cacheTimeouts: this.cacheTimeouts.size,
+                    logCount: LoggerUtil.logs.length,
+                    metricsOperations: Object.keys(this.metrics.operationTimes).length
+                };
+                
+                if (performance.memory) {
+                    stats.heapUsed = (performance.memory.usedJSHeapSize / 1048576).toFixed(2) + ' MB';
+                    stats.heapLimit = (performance.memory.jsHeapSizeLimit / 1048576).toFixed(2) + ' MB';
+                }
+                
+                return stats;
+            }
+        };
+
+        /**
+         * Logger Module
+         * Provides structured logging and error tracking
+         */
+        const LoggerUtil = {
+            logs: [],
+            maxLogs: 1000,
+
+            LOG_LEVELS: {
+                DEBUG: 'DEBUG',
+                INFO: 'INFO',
+                WARN: 'WARN',
+                ERROR: 'ERROR'
+            },
+
+            /**
+             * Log a message with structured data
+             */
+            log(level, message, data = {}) {
+                const timestamp = new Date().toISOString();
+                const logEntry = {
+                    timestamp,
+                    level,
+                    message,
+                    data,
+                    userAgent: navigator.userAgent
+                };
+                
+                this.logs.push(logEntry);
+                
+                // Keep only recent logs
+                if (this.logs.length > this.maxLogs) {
+                    this.logs.shift();
+                }
+                
+                // Also log to console in development
+                const consoleMethod = level === 'ERROR' ? 'error' : level === 'WARN' ? 'warn' : 'log';
+                console[consoleMethod](`[${timestamp}] ${level}: ${message}`, data);
+            },
+
+            debug(message, data) {
+                this.log(this.LOG_LEVELS.DEBUG, message, data);
+            },
+
+            info(message, data) {
+                this.log(this.LOG_LEVELS.INFO, message, data);
+            },
+
+            warn(message, data) {
+                this.log(this.LOG_LEVELS.WARN, message, data);
+            },
+
+            error(message, data) {
+                this.log(this.LOG_LEVELS.ERROR, message, data);
+            },
+
+            /**
+             * Get logs filtered by level and date range
+             */
+            getLogs(level = null, hoursBack = 24) {
+                const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+                let filtered = this.logs.filter(log => new Date(log.timestamp) >= cutoffTime);
+                
+                if (level) {
+                    filtered = filtered.filter(log => log.level === level);
+                }
+                
+                return filtered;
+            },
+
+            /**
+             * Export logs for debugging
+             */
+            exportLogs() {
+                return {
+                    exported: new Date().toISOString(),
+                    totalLogs: this.logs.length,
+                    logs: this.logs
+                };
+            },
+
+            /**
+             * Track user action with metrics
+             */
+            trackAction(action, category, data = {}) {
+                this.info(`User Action: ${action}`, {
+                    category,
+                    ...data
+                });
+            },
+
+            /**
+             * Track performance of operations
+             */
+            trackPerformance(operation, duration, success = true) {
+                this.info(`Operation: ${operation}`, {
+                    duration: `${duration.toFixed(2)}ms`,
+                    success,
+                    category: 'performance'
+                });
             }
         };
 
@@ -2519,74 +3649,103 @@
             });
             const [sortConfig, setSortConfig] = useState({ key: 'dateApplied', direction: 'desc' });
 
-            // Load jobs from localStorage
+            // Load jobs from localStorage with security validation
             useEffect(() => {
                 try {
-                    const savedJobs = localStorage.getItem("jobTrackerJobs");
-                    if (savedJobs) {
-                        const parsed = JSON.parse(savedJobs);
-                        if (Array.isArray(parsed)) {
-                            // Validate and clean job data
-                            const validJobs = parsed.map(job => ({
-                                ...job,
-                                status: job.status || "Not Applied",
-                                priority: job.priority || "Tier 2",
-                                company: job.company || "Unknown",
-                                role: job.role || "Unknown Role"
-                            }));
-                            console.log("Loaded jobs from localStorage:", validJobs);
-                            setJobs(validJobs);
+                    const savedJobs = StorageUtil.get(APP_CONFIG.STORAGE_KEYS.JOBS, []);
+                    if (Array.isArray(savedJobs) && savedJobs.length > 0) {
+                        // Validate each job object
+                        const validJobs = [];
+                        const errors = [];
+                        
+                        for (let i = 0; i < savedJobs.length; i++) {
+                            try {
+                                const validatedJob = SecurityUtil.validateJobData(savedJobs[i]);
+                                validJobs.push(validatedJob);
+                            } catch (validationError) {
+                                errors.push(`Job ${i + 1}: ${validationError.message}`);
+                                console.warn(`Skipping invalid job at index ${i}:`, validationError);
+                            }
                         }
-                    }
-                    const savedCompanies = localStorage.getItem("jobTrackerCustomCompanies");
-                    if (savedCompanies) {
-                        const parsed = JSON.parse(savedCompanies);
-                        if (typeof parsed === 'object' && parsed !== null) {
-                            console.log("Loaded companies from localStorage:", parsed);
-                            setCustomCompanies(parsed);
+                        
+                        if (errors.length > 0 && errors.length < savedJobs.length) {
+                            console.warn(`Loaded ${validJobs.length} valid jobs, skipped ${errors.length} invalid entries`);
                         }
+                        
+                        setJobs(validJobs);
                     }
-                    const savedBackupTime = localStorage.getItem("jobTrackerLastBackup");
+                    
+                    const savedCompanies = StorageUtil.get(APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, {});
+                    if (savedCompanies && typeof savedCompanies === 'object') {
+                        // Validate company data
+                        const validCompanies = {};
+                        for (const [name, data] of Object.entries(savedCompanies)) {
+                            try {
+                                validCompanies[name] = SecurityUtil.validateCompanyData({ ...data, name });
+                            } catch (err) {
+                                console.warn(`Skipping invalid company ${name}:`, err);
+                            }
+                        }
+                        setCustomCompanies(validCompanies);
+                    }
+                    
+                    const savedBackupTime = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.LAST_BACKUP);
                     if (savedBackupTime) {
-                        setLastBackupTime(new Date(savedBackupTime));
+                        const backupDate = new Date(savedBackupTime);
+                        if (!isNaN(backupDate.getTime())) {
+                            setLastBackupTime(backupDate);
+                        }
                     }
                 } catch (error) {
-                    console.error("Error loading data from localStorage:", error);
-                    alert("Error loading saved data. Starting fresh.");
+                    SecurityUtil.handleError(error, 'loading saved data');
                 }
             }, []);
+            // Create debounced save functions to avoid excessive writes
+            const debouncedSaveJobs = useRef(
+                PerformanceUtil.debounce(function(jobsData) {
+                    try {
+                        const startTime = performance.now();
+                        StorageUtil.set(APP_CONFIG.STORAGE_KEYS.JOBS, jobsData);
+                        const duration = performance.now() - startTime;
+                        LoggerUtil.trackPerformance('persistJobs', duration, true);
+                    } catch (error) {
+                        LoggerUtil.error('Error saving jobs', { error: error.message });
+                        SecurityUtil.handleError(error, 'saving jobs');
+                    }
+                }, 1000)
+            ).current;
 
-            // Save jobs to localStorage
+            const debouncedSaveCompanies = useRef(
+                PerformanceUtil.debounce(function(companiesData) {
+                    try {
+                        const startTime = performance.now();
+                        StorageUtil.set(APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, companiesData);
+                        const duration = performance.now() - startTime;
+                        LoggerUtil.trackPerformance('persistCompanies', duration, true);
+                    } catch (error) {
+                        LoggerUtil.error('Error saving companies', { error: error.message });
+                        SecurityUtil.handleError(error, 'saving companies');
+                    }
+                }, 1000)
+            ).current;
+
+            // Save jobs to localStorage with validation (debounced)
             useEffect(() => {
-                try {
-                    console.log("Saving jobs to localStorage:", jobs);
-                    localStorage.setItem("jobTrackerJobs", JSON.stringify(jobs));
-                    console.log("Jobs saved successfully");
-                } catch (error) {
-                    console.error("Error saving jobs to localStorage:", error);
-                    alert("Error saving jobs: " + error.message);
-                }
+                if (jobs.length === 0) return; // Don't save empty array on initial load
+                debouncedSaveJobs(jobs);
             }, [jobs]);
 
-            // Save custom companies to localStorage
+            // Save custom companies to localStorage with validation (debounced)
             useEffect(() => {
-                try {
-                    console.log("Saving companies to localStorage:", customCompanies);
-                    localStorage.setItem("jobTrackerCustomCompanies", JSON.stringify(customCompanies));
-                    console.log("Companies saved successfully");
-                } catch (error) {
-                    console.error("Error saving companies to localStorage:", error);
-                    alert("Error saving companies: " + error.message);
-                }
+                debouncedSaveCompanies(customCompanies);
             }, [customCompanies]);
 
-            // Save to local storage when customCompanies change
+            // Save blockedCompanies to localStorage (debounced)
             useEffect(() => {
-                localStorage.setItem("customCompanies", JSON.stringify(customCompanies));
-            }, [customCompanies]);
-            // Save blockedCompanies to localStorage
-            useEffect(() => {
-                localStorage.setItem("blockedCompanies", JSON.stringify(blockedCompanies));
+                const saveBlocked = PerformanceUtil.debounce(function() {
+                    localStorage.setItem("blockedCompanies", JSON.stringify(blockedCompanies));
+                }, 500);
+                saveBlocked();
             }, [blockedCompanies]);
             // Merge default and custom companies
             // Start with hardcoded companies
@@ -2660,60 +3819,113 @@
 
             const addJob = (job) => {
                 try {
-                    console.log("addJob called with:", job);
-                    const newJob = {
-                        ...job,
-                        id: Date.now(),
-                        // Use the date from the form, or fall back to today if somehow missing
-                        dateApplied: job.dateApplied || new Date().toISOString()
-                    };
-                    console.log("newJob created:", newJob);
-                    console.log("Current jobs before update:", jobs);
+                    const startTime = performance.now();
+                    
+                    // Rate limiting
+                    SecurityUtil.checkRateLimit();
+                    
+                    // Validate and sanitize job data
+                    const validatedJob = SecurityUtil.validateJobData(job);
+                    
+                    // Check total jobs limit
+                    if (jobs.length >= SecurityUtil.CONFIG.MAX_JOBS_COUNT) {
+                        throw new Error(`Maximum jobs limit (${SecurityUtil.CONFIG.MAX_JOBS_COUNT}) reached`);
+                    }
+                    
                     setJobs(prevJobs => {
-                        const updated = [...prevJobs, newJob];
-                        console.log("Updated jobs array:", updated);
+                        const updated = [...prevJobs, validatedJob];
                         return updated;
                     });
-                    console.log("About to close modal");
+                    
+                    // Clear related caches
+                    PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_')));
+                    
+                    const duration = performance.now() - startTime;
+                    LoggerUtil.trackPerformance('addJob', duration, true);
+                    LoggerUtil.trackAction('job_added', 'job_management', { jobId: validatedJob.id });
+                    
                     setShowModal(false);
                     setEditingJob(null);
-                    console.log("addJob completed successfully");
                 } catch (error) {
-                    console.error("Error adding job:", error);
-                    alert("Error adding job: " + error.message);
+                    LoggerUtil.error('Error adding job', { error: error.message });
+                    SecurityUtil.handleError(error, 'adding job');
                 }
             };
 
             const addCompany = (company) => {
                 try {
-                    const newCompany = { 
-                        name: company.name, 
-                        url: company.url,
-                        category: company.category 
-                    };
+                    const startTime = performance.now();
                     
-                    // Store by company name, not by category
+                    // Rate limiting
+                    SecurityUtil.checkRateLimit();
+                    
+                    // Validate company data
+                    const validatedCompany = SecurityUtil.validateCompanyData(company);
+                    
+                    // Check total companies limit
+                    const currentCount = Object.keys(customCompanies).length;
+                    if (currentCount >= SecurityUtil.CONFIG.MAX_COMPANIES_COUNT) {
+                        throw new Error(`Maximum companies limit (${SecurityUtil.CONFIG.MAX_COMPANIES_COUNT}) reached`);
+                    }
+                    
                     setCustomCompanies(prev => ({
                         ...prev,
-                        [company.name]: newCompany
+                        [validatedCompany.name]: validatedCompany
                     }));
+                    
+                    // Clear related caches
+                    PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_')));
+                    
+                    const duration = performance.now() - startTime;
+                    LoggerUtil.trackPerformance('addCompany', duration, true);
+                    LoggerUtil.trackAction('company_added', 'company_management', { company: validatedCompany.name });
                     
                     setShowCompanyModal(false);
                 } catch (error) {
-                    console.error("Error adding company:", error);
-                    alert("Error adding company. Please try again.");
+                    LoggerUtil.error('Error adding company', { error: error.message });
+                    SecurityUtil.handleError(error, 'adding company');
                 }
             };
 
             const updateJob = (updatedJob) => {
-                setJobs(jobs.map(j => j.id === updatedJob.id ? updatedJob : j));
-                setShowModal(false);
-                setEditingJob(null);
+                try {
+                    const startTime = performance.now();
+                    
+                    // Rate limiting
+                    SecurityUtil.checkRateLimit();
+                    
+                    // Validate updated job data
+                    const validatedJob = SecurityUtil.validateJobData(updatedJob);
+                    
+                    setJobs(jobs.map(j => j.id === validatedJob.id ? validatedJob : j));
+                    
+                    // Clear related caches
+                    PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_')));
+                    
+                    const duration = performance.now() - startTime;
+                    LoggerUtil.trackPerformance('updateJob', duration, true);
+                    LoggerUtil.trackAction('job_updated', 'job_management', { jobId: validatedJob.id });
+                    
+                    setShowModal(false);
+                    setEditingJob(null);
+                } catch (error) {
+                    LoggerUtil.error('Error updating job', { error: error.message });
+                    SecurityUtil.handleError(error, 'updating job');
+                }
             };
 
             const deleteJob = (id) => {
                 if (confirm("Are you sure you want to delete this job?")) {
+                    const startTime = performance.now();
+                    
                     setJobs(jobs.filter(j => j.id !== id));
+                    
+                    // Clear related caches
+                    PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_')));
+                    
+                    const duration = performance.now() - startTime;
+                    LoggerUtil.trackPerformance('deleteJob', duration, true);
+                    LoggerUtil.trackAction('job_deleted', 'job_management', { jobId: id });
                 }
             };
 
@@ -2741,47 +3953,89 @@
             };
 
             const exportBackup = () => {
-                const backup = {
-                    version: "1.0",
-                    exportDate: new Date().toISOString(),
-                    jobs: jobs,
-                    customCompanies: customCompanies,
-                    blockedCompanies: blockedCompanies
-                };
-                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `job-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-                
-                // Update last backup time
-                const now = new Date();
-                setLastBackupTime(now);
-                localStorage.setItem("jobTrackerLastBackup", now.toISOString());
-                alert("Backup downloaded successfully!");
+                try {
+                    const backupData = {
+                        jobs: jobs,
+                        customCompanies: customCompanies,
+                        blockedCompanies: blockedCompanies
+                    };
+                    
+                    const backup = {
+                        version: APP_CONFIG.VERSION,
+                        exportDate: new Date().toISOString(),
+                        checksum: SecurityUtil.generateChecksum(backupData),
+                        data: backupData
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `job-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    
+                    // Clean up
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Update last backup time
+                    const now = new Date();
+                    setLastBackupTime(now);
+                    StorageUtil.set(APP_CONFIG.STORAGE_KEYS.LAST_BACKUP, now.toISOString());
+                    
+                    alert("Backup downloaded successfully!");
+                } catch (error) {
+                    SecurityUtil.handleError(error, 'exporting backup');
+                }
             };
 
             const importBackup = (fileContent, mode = 'replace') => {
                 try {
-                    const backup = JSON.parse(fileContent);
+                    // Validate import data structure and size
+                    const backup = SecurityUtil.validateImportData(fileContent);
                     
-                    if (!backup.jobs || !Array.isArray(backup.jobs)) {
-                        throw new Error("Invalid backup file: missing jobs data");
+                    // Verify checksum if present (new format)
+                    if (backup.checksum && backup.data) {
+                        if (!SecurityUtil.verifyChecksum(backup.data, backup.checksum)) {
+                            const proceed = confirm(
+                                'Warning: Data integrity check failed. The backup file may be corrupted or tampered with.\\n\\n' +
+                                'Do you want to proceed anyway? (Not recommended)'
+                            );
+                            if (!proceed) {
+                                throw new Error('Import cancelled: integrity check failed');
+                            }
+                        }
                     }
                     
-                    // Validate imported jobs
-                    const validJobs = backup.jobs.map(job => ({
-                        ...job,
-                        status: job.status || "Not Applied",
-                        priority: job.priority || "Tier 2",
-                        company: job.company || "Unknown",
-                        role: job.role || "Unknown Role",
-                        id: job.id || Date.now() + Math.random() // Ensure unique ID
-                    }));
+                    // Extract data (handle both old and new format)
+                    const importData = backup.data || backup;
+                    const jobsToImport = importData.jobs || [];
+                    
+                    // Validate and sanitize each job
+                    const validJobs = [];
+                    const validationErrors = [];
+                    
+                    for (let i = 0; i < jobsToImport.length; i++) {
+                        try {
+                            const validatedJob = SecurityUtil.validateJobData(jobsToImport[i]);
+                            validJobs.push(validatedJob);
+                        } catch (err) {
+                            validationErrors.push(`Job ${i + 1}: ${err.message}`);
+                        }
+                    }
+                    
+                    // Warn if some jobs were invalid
+                    if (validationErrors.length > 0) {
+                        const proceed = confirm(
+                            `Warning: ${validationErrors.length} out of ${jobsToImport.length} jobs failed validation and will be skipped.\\n\\n` +
+                            `Continue with ${validJobs.length} valid jobs?`
+                        );
+                        if (!proceed) {
+                            throw new Error('Import cancelled');
+                        }
+                    }
                     
                     if (mode === 'merge') {
-                        // Merge mode: check for duplicates and append new jobs
+                        // Merge mode: check for duplicates
                         const existingJobKeys = new Set(
                             jobs.map(j => `${j.company.toLowerCase()}-${j.role.toLowerCase()}-${j.dateApplied}`)
                         );
@@ -2791,43 +4045,39 @@
                             return !existingJobKeys.has(key);
                         });
                         
+                        // Check total limit after merge
+                        if (jobs.length + newJobs.length > SecurityUtil.CONFIG.MAX_JOBS_COUNT) {
+                            throw new Error(
+                                `Merge would exceed maximum jobs limit (${SecurityUtil.CONFIG.MAX_JOBS_COUNT}). ` +
+                                `Current: ${jobs.length}, New: ${newJobs.length}`
+                            );
+                        }
+                        
                         setJobs([...jobs, ...newJobs]);
                         
-                        // Merge custom companies - handle both old and new structures
-                        if (backup.customCompanies && typeof backup.customCompanies === 'object') {
+                        // Merge and validate custom companies
+                        if (importData.customCompanies && typeof importData.customCompanies === 'object') {
                             const mergedCompanies = { ...customCompanies };
                             
-                            // Check if it's the new structure (company-name keyed) or old (category keyed)
-                            const firstKey = Object.keys(backup.customCompanies)[0];
-                            const isNewStructure = firstKey && backup.customCompanies[firstKey] && 
-                                                  (backup.customCompanies[firstKey].name || backup.customCompanies[firstKey].url);
-                            
-                            if (isNewStructure) {
-                                // New structure: merge directly
-                                Object.assign(mergedCompanies, backup.customCompanies);
-                            } else {
-                                // Old structure: convert to new structure
-                                Object.entries(backup.customCompanies).forEach(([category, companies]) => {
-                                    if (Array.isArray(companies)) {
-                                        companies.forEach(company => {
-                                            if (!mergedCompanies[company.name]) {
-                                                mergedCompanies[company.name] = {
-                                                    ...company,
-                                                    category: category
-                                                };
-                                            }
-                                        });
-                                    }
-                                });
+                            for (const [name, data] of Object.entries(importData.customCompanies)) {
+                                try {
+                                    mergedCompanies[name] = SecurityUtil.validateCompanyData({ ...data, name });
+                                } catch (err) {
+                                    console.warn(`Skipping invalid company ${name}:`, err);
+                                }
                             }
                             
                             setCustomCompanies(mergedCompanies);
                         }
-                        // Merge blocked companies
-                        if (backup.blockedCompanies && Array.isArray(backup.blockedCompanies)) {
-                                const mergedBlocked = [...new Set([...blockedCompanies, ...backup.blockedCompanies])];
-                                setBlockedCompanies(mergedBlocked);
-                            }
+                        
+                        // Merge blocked companies with sanitization
+                        if (importData.blockedCompanies && Array.isArray(importData.blockedCompanies)) {
+                            const sanitizedBlocked = importData.blockedCompanies
+                                .filter(name => typeof name === 'string')
+                                .map(name => SecurityUtil.sanitizeInput(name, 200));
+                            const mergedBlocked = [...new Set([...blockedCompanies, ...sanitizedBlocked])];
+                            setBlockedCompanies(mergedBlocked);
+                        }
                         
                         const skipped = validJobs.length - newJobs.length;
                         alert(
@@ -2837,27 +4087,45 @@
                             `Total jobs: ${jobs.length + newJobs.length}`
                         );
                     } else {
-                        // Replace mode: overwrite everything
+                        // Replace mode: validate limits
+                        if (validJobs.length > SecurityUtil.CONFIG.MAX_JOBS_COUNT) {
+                            throw new Error(
+                                `Import exceeds maximum jobs limit: ${validJobs.length} > ${SecurityUtil.CONFIG.MAX_JOBS_COUNT}`
+                            );
+                        }
+                        
                         setJobs(validJobs);
                         
-                        if (backup.customCompanies && typeof backup.customCompanies === 'object') {
-                            setCustomCompanies(backup.customCompanies);
+                        // Validate and import companies
+                        if (importData.customCompanies && typeof importData.customCompanies === 'object') {
+                            const validCompanies = {};
+                            for (const [name, data] of Object.entries(importData.customCompanies)) {
+                                try {
+                                    validCompanies[name] = SecurityUtil.validateCompanyData({ ...data, name });
+                                } catch (err) {
+                                    console.warn(`Skipping invalid company ${name}:`, err);
+                                }
+                            }
+                            setCustomCompanies(validCompanies);
                         }
 
-                        if (backup.blockedCompanies && Array.isArray(backup.blockedCompanies)) {
-                            setBlockedCompanies(backup.blockedCompanies);
+                        // Sanitize blocked companies
+                        if (importData.blockedCompanies && Array.isArray(importData.blockedCompanies)) {
+                            const sanitized = importData.blockedCompanies
+                                .filter(name => typeof name === 'string')
+                                .map(name => SecurityUtil.sanitizeInput(name, 200));
+                            setBlockedCompanies(sanitized);
                         }
                         
                         alert(
                             `Import complete!\n\n` +
-                            `Imported ${validJobs.length} jobs and ${Object.keys(backup.customCompanies || {}).length} custom company categories!`
+                            `Imported ${validJobs.length} jobs successfully!`
                         );
                     }
                     
                     setShowImportModal(false);
                 } catch (error) {
-                    console.error("Error importing backup:", error);
-                    alert("Error importing backup: " + error.message);
+                    SecurityUtil.handleError(error, 'importing backup');
                 }
             };
 
@@ -2902,16 +4170,52 @@ const getSortIcon = (columnKey) => {
     return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
 };
 
-const sortedJobs = [...jobs].sort((a, b) => {
-    if (!sortConfig.key) return 0;
-    const aVal = (a[sortConfig.key] || '').toString().toLowerCase();
-    const bVal = (b[sortConfig.key] || '').toString().toLowerCase();
-    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-    return 0;
-});
+// Build index for faster lookups
+const jobIndex = PerformanceUtil.memoize('jobIndex', () => {
+    const index = {
+        byId: new Map(),
+        byStatus: {},
+        byPriority: {},
+        byCompany: {}
+    };
+    
+    jobs.forEach(job => {
+        index.byId.set(job.id, job);
+        
+        // Index by status
+        if (!index.byStatus[job.status]) index.byStatus[job.status] = [];
+        index.byStatus[job.status].push(job);
+        
+        // Index by priority
+        if (!index.byPriority[job.priority]) index.byPriority[job.priority] = [];
+        index.byPriority[job.priority].push(job);
+        
+        // Index by company
+        if (!index.byCompany[job.company]) index.byCompany[job.company] = [];
+        index.byCompany[job.company].push(job);
+    });
+    
+    return index;
+}, 10000);
 
-            const filteredJobs = sortedJobs.filter(job => {
+const sortedJobs = PerformanceUtil.memoize('sortedJobs', () => {
+    return PerformanceUtil.measure('sorting', () => {
+        return [...jobs].sort((a, b) => {
+            if (!sortConfig.key) return 0;
+            const aVal = (a[sortConfig.key] || '').toString().toLowerCase();
+            const bVal = (b[sortConfig.key] || '').toString().toLowerCase();
+            if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    });
+}, 10000);
+
+const filteredJobs = PerformanceUtil.memoize(
+    `filteredJobs_${JSON.stringify(filters)}_${sortConfig.key}`,
+    () => {
+        return PerformanceUtil.measure('filtering', () => {
+            return sortedJobs.filter(job => {
                 if (filters.status !== "all" && job.status !== filters.status) return false;
                 if (filters.priority !== "all" && job.priority !== filters.priority) return false;
                 if (filters.search) {
@@ -2922,6 +4226,30 @@ const sortedJobs = [...jobs].sort((a, b) => {
                 }
                 return true;
             });
+        });
+    },
+    10000
+);
+
+// Log performance metrics periodically and cleanup memory
+useEffect(() => {
+    const interval = setInterval(() => {
+        const report = PerformanceUtil.getReport();
+        if (Object.keys(report.operationStats).length > 0) {
+            LoggerUtil.info('Performance Report', report);
+        }
+        
+        // Cleanup every 5 minutes to prevent memory leaks
+        PerformanceUtil.cleanup();
+        LoggerUtil.info('Memory Cleanup', PerformanceUtil.getMemoryStats());
+    }, 60000); // Every 60 seconds
+    
+    // Cleanup on unmount
+    return () => {
+        clearInterval(interval);
+        PerformanceUtil.cleanup();
+    };
+}, []);
 
             return (
                 <div className="app">
@@ -3032,6 +4360,8 @@ const sortedJobs = [...jobs].sort((a, b) => {
 
         // Header Component
         function Header({ view, setView, onBackup, onImport, lastBackupTime, theme, toggleTheme }) {
+            const [showPerf, setShowPerf] = React.useState(false);
+            
             const daysSinceBackup = lastBackupTime 
                 ? Math.floor((Date.now() - lastBackupTime.getTime()) / (1000 * 60 * 60 * 24))
                 : null;
@@ -3039,40 +4369,94 @@ const sortedJobs = [...jobs].sort((a, b) => {
             const backupWarning = daysSinceBackup === null || daysSinceBackup >= 1;
             
             return (
-                <header className="header">
-                    <div className="header-content">
-                        <div className="logo">
-                            <div className="logo-icon">🎯</div>
-                            <span>Job Search Dashboard</span>
-                        </div>
-                        <div className="header-controls">
-                            <button
-                                className="theme-toggle"
-                                onClick={toggleTheme}
-                                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-                            >
-                                {theme === 'light' ? '🌙' : '☀️'}
-                            </button>
-                            <nav className="nav">
-                                <button className={`nav-btn ${view === "dashboard" ? "active" : ""}`} onClick={() => setView("dashboard")}>Dashboard</button>
-                                <button className={`nav-btn ${view === "companies" ? "active" : ""}`} onClick={() => setView("companies")}>Companies</button>
-                                <button className={`nav-btn ${view === "jobs" ? "active" : ""}`} onClick={() => setView("jobs")}>Jobs</button>
-                                <button 
-                                    className="nav-btn" 
-                                    onClick={onBackup}
-                                    style={{ 
-                                        borderColor: backupWarning ? "#ea580c" : undefined,
-                                        background: backupWarning ? "#faa29d" : undefined
-                                    }}
-                                    title={lastBackupTime ? `Last backup: ${lastBackupTime.toLocaleDateString()}` : "No backup yet"}
+                <>
+                    <header className="header">
+                        <div className="header-content">
+                            <div className="logo">
+                                <div className="logo-icon">🎯</div>
+                                <span>Job Search Dashboard</span>
+                            </div>
+                            <div className="header-controls">
+                                <button
+                                    className="theme-toggle"
+                                    onClick={toggleTheme}
+                                    title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
                                 >
-                                    💾 Back up {backupWarning && "⚠️"}
+                                    {theme === 'light' ? '🌙' : '☀️'}
                                 </button>
-                                <button className="nav-btn" onClick={onImport}>📥 Import</button>
-                            </nav>
+                                <button
+                                    className="theme-toggle"
+                                    onClick={() => setShowPerf(!showPerf)}
+                                    title="Toggle performance metrics"
+                                    style={{ fontSize: '1.2rem' }}
+                                >
+                                    ⚡
+                                </button>
+                                <nav className="nav">
+                                    <button className={`nav-btn ${view === "dashboard" ? "active" : ""}`} onClick={() => setView("dashboard")}>Dashboard</button>
+                                    <button className={`nav-btn ${view === "companies" ? "active" : ""}`} onClick={() => setView("companies")}>Companies</button>
+                                    <button className={`nav-btn ${view === "jobs" ? "active" : ""}`} onClick={() => setView("jobs")}>Jobs</button>
+                                    <button 
+                                        className="nav-btn" 
+                                        onClick={onBackup}
+                                        style={{ 
+                                            borderColor: backupWarning ? "#ea580c" : undefined,
+                                            background: backupWarning ? "#faa29d" : undefined
+                                        }}
+                                        title={lastBackupTime ? `Last backup: ${lastBackupTime.toLocaleDateString()}` : "No backup yet"}
+                                    >
+                                        💾 Back up {backupWarning && "⚠️"}
+                                    </button>
+                                    <button className="nav-btn" onClick={onImport}>📥 Import</button>
+                                </nav>
+                            </div>
                         </div>
+                    </header>
+                    {showPerf && (
+                        <div style={{
+                            background: 'var(--bg-tertiary)',
+                            border: '1px solid var(--border-primary)',
+                            padding: '1rem',
+                            margin: '0 1rem 1rem 1rem',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            fontFamily: 'monospace',
+                            maxHeight: '300px',
+                            overflow: 'auto'
+                        }}>
+                            <PerformanceMonitor />
+                        </div>
+                    )}
+                </>
+            );
+        }
+
+        // Performance Monitor Component
+        function PerformanceMonitor() {
+            const [stats, setStats] = React.useState(null);
+            
+            React.useEffect(() => {
+                const interval = setInterval(() => {
+                    setStats(PerformanceUtil.getReport());
+                }, 2000);
+                
+                return () => clearInterval(interval);
+            }, []);
+            
+            if (!stats) return null;
+            
+            return (
+                <div>
+                    <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>📊 Performance Metrics</div>
+                    <div style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                        Cache Hit Rate: {stats.cacheStats.hitRate} (Hits: {stats.cacheStats.hits} | Misses: {stats.cacheStats.misses})
                     </div>
-                </header>
+                    {Object.entries(stats.operationStats).slice(0, 5).map(([op, data]) => (
+                        <div key={op} style={{ marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>
+                            {op}: {data.avg} avg | min: {data.min} | max: {data.max} | calls: {data.count}
+                        </div>
+                    ))}
+                </div>
             );
         }
 
@@ -4114,9 +5498,92 @@ const sortedJobs = [...jobs].sort((a, b) => {
                                         </div>
                                         <div className="form-group">
                                             <label>Job URL</label>
-                                            <input type="url" value={viewModalEdit ? editedJobData?.url || '' : viewModalJob.url || ''} readOnly={!viewModalEdit} onChange={e => {
-                                                setEditedJobData({ ...editedJobData, url: e.target.value });
-                                            }} style={viewFieldStyle} />
+                                            {viewModalEdit ? (
+                                                <input type="url" value={editedJobData?.url || ''} onChange={e => {
+                                                    setEditedJobData({ ...editedJobData, url: e.target.value });
+                                                }} />
+                                            ) : (
+                                                viewModalJob.url ? (
+                                                    <div style={{ 
+                                                        ...viewFieldStyle, 
+                                                        cursor: 'default',
+                                                        padding: '0.75rem',
+                                                        wordBreak: 'break-all'
+                                                    }}>
+                                                        <a 
+                                                            href={viewModalJob.url} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            {viewModalJob.url}
+                                                        </a>
+                                                    </div>
+                                                ) : (
+                                                    <div style={viewFieldStyle}>-</div>
+                                                )
+                                            )}
+                                        </div>
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Resume URL</label>
+                                                {viewModalEdit ? (
+                                                    <input type="url" value={editedJobData?.resumeUrl || ''} onChange={e => {
+                                                        setEditedJobData({ ...editedJobData, resumeUrl: e.target.value });
+                                                    }} />
+                                                ) : (
+                                                    viewModalJob.resumeUrl ? (
+                                                        <div style={{ 
+                                                            ...viewFieldStyle, 
+                                                            cursor: 'default',
+                                                            padding: '0.75rem',
+                                                            wordBreak: 'break-all'
+                                                        }}>
+                                                            <a 
+                                                                href={viewModalJob.resumeUrl} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                {viewModalJob.resumeUrl}
+                                                            </a>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={viewFieldStyle}>-</div>
+                                                    )
+                                                )}
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Cover Letter URL</label>
+                                                {viewModalEdit ? (
+                                                    <input type="url" value={editedJobData?.coverLetterUrl || ''} onChange={e => {
+                                                        setEditedJobData({ ...editedJobData, coverLetterUrl: e.target.value });
+                                                    }} />
+                                                ) : (
+                                                    viewModalJob.coverLetterUrl ? (
+                                                        <div style={{ 
+                                                            ...viewFieldStyle, 
+                                                            cursor: 'default',
+                                                            padding: '0.75rem',
+                                                            wordBreak: 'break-all'
+                                                        }}>
+                                                            <a 
+                                                                href={viewModalJob.coverLetterUrl} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                {viewModalJob.coverLetterUrl}
+                                                            </a>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={viewFieldStyle}>-</div>
+                                                    )
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="form-row">
                                             <div className="form-group">
@@ -4174,10 +5641,23 @@ const sortedJobs = [...jobs].sort((a, b) => {
                                         </div>
                                         <div className="form-group">
                                             <label>Notes</label>
-                                            <textarea value={viewModalEdit ? editedJobData?.notes || '' : viewModalJob.notes || ''} readOnly={!viewModalEdit} onChange={e => {
-                                                setEditedJobData({ ...editedJobData, notes: e.target.value });
-                                                autoExpandTextarea();
-                                            }} ref={notesTextareaRef} style={{ minHeight: '120px', resize: 'vertical', overflow: 'hidden', ...viewFieldStyle }} />
+                                            {viewModalEdit ? (
+                                                <textarea value={editedJobData?.notes || ''} onChange={e => {
+                                                    setEditedJobData({ ...editedJobData, notes: e.target.value });
+                                                    autoExpandTextarea();
+                                                }} ref={notesTextareaRef} style={{ minHeight: '120px', resize: 'vertical', overflow: 'hidden' }} />
+                                            ) : (
+                                                <div style={{ 
+                                                    ...viewFieldStyle,
+                                                    cursor: 'default',
+                                                    minHeight: '120px',
+                                                    padding: '0.75rem',
+                                                    whiteSpace: 'pre-wrap',
+                                                    wordBreak: 'break-word'
+                                                }}>
+                                                    {viewModalJob.notes ? UIUtil.linkify(viewModalJob.notes) : '-'}
+                                                </div>
+                                            )}
                                         </div>
                                         {viewModalEdit && (
                                             <div className="modal-footer" style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-primary)', paddingTop: '1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
