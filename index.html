@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Search Dashboard - Jill Shaheen</title>
+    <!-- Favicon: Target icon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-size='96'>🎯</text></svg>">
     
     <!-- Security Headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
@@ -3381,6 +3383,23 @@
             },
 
             /**
+             * Clear cache entries by prefix
+             * @param  {...string} prefixes - Cache key prefixes
+             */
+            clearCacheByPrefix(...prefixes) {
+                const keys = Array.from(this.cache.keys());
+                keys.forEach(k => {
+                    if (prefixes.some(p => k.startsWith(p))) {
+                        if (this.cacheTimeouts.has(k)) {
+                            clearTimeout(this.cacheTimeouts.get(k));
+                            this.cacheTimeouts.delete(k);
+                        }
+                        this.cache.delete(k);
+                    }
+                });
+            },
+
+            /**
              * Create debounced function
              * @param {Function} fn - Function to debounce
              * @param {number} delay - Delay in ms
@@ -3774,6 +3793,21 @@
                 }, 500);
                 saveBlocked();
             }, [blockedCompanies]);
+
+            // Ensure pending changes are flushed before unload to avoid data loss
+            useEffect(() => {
+                const flushOnUnload = () => {
+                    try {
+                        StorageUtil.set(APP_CONFIG.STORAGE_KEYS.JOBS, jobs);
+                        StorageUtil.set(APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, customCompanies);
+                        localStorage.setItem('blockedCompanies', JSON.stringify(blockedCompanies));
+                    } catch (e) {
+                        console.warn('Failed to flush data on unload:', e);
+                    }
+                };
+                window.addEventListener('beforeunload', flushOnUnload);
+                return () => window.removeEventListener('beforeunload', flushOnUnload);
+            }, [jobs, customCompanies, blockedCompanies]);
             // Merge default and custom companies
             // Start with hardcoded companies
             const allCompanies = { ...DEFAULT_COMPANIES };
@@ -4079,8 +4113,13 @@
                                 `Current: ${jobs.length}, New: ${newJobs.length}`
                             );
                         }
-                        
-                        setJobs([...jobs, ...newJobs]);
+                        // Compute merged jobs and persist immediately to avoid loss on quick refresh
+                        const mergedJobs = [...jobs, ...newJobs];
+                        setJobs(mergedJobs);
+                        StorageUtil.set(APP_CONFIG.STORAGE_KEYS.JOBS, mergedJobs);
+                        // Invalidate performance caches to reflect new data immediately
+                        PerformanceUtil.clearCache('jobIndex');
+                        PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                         
                         // Merge and validate custom companies
                         if (importData.customCompanies && typeof importData.customCompanies === 'object') {
@@ -4093,8 +4132,11 @@
                                     console.warn(`Skipping invalid company ${name}:`, err);
                                 }
                             }
-                            
+                            // Update state and persist immediately
                             setCustomCompanies(mergedCompanies);
+                            StorageUtil.set(APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, mergedCompanies);
+                            PerformanceUtil.clearCache('jobIndex');
+                            PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                         }
                         
                         // Merge blocked companies with sanitization
@@ -4104,6 +4146,9 @@
                                 .map(name => SecurityUtil.sanitizeInput(name, 200));
                             const mergedBlocked = [...new Set([...blockedCompanies, ...sanitizedBlocked])];
                             setBlockedCompanies(mergedBlocked);
+                            try { localStorage.setItem('blockedCompanies', JSON.stringify(mergedBlocked)); } catch {}
+                            PerformanceUtil.clearCache('jobIndex');
+                            PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                         }
                         
                         const skipped = validJobs.length - newJobs.length;
@@ -4120,8 +4165,11 @@
                                 `Import exceeds maximum jobs limit: ${validJobs.length} > ${SecurityUtil.CONFIG.MAX_JOBS_COUNT}`
                             );
                         }
-                        
+                        // Set and persist jobs immediately
                         setJobs(validJobs);
+                        StorageUtil.set(APP_CONFIG.STORAGE_KEYS.JOBS, validJobs);
+                        PerformanceUtil.clearCache('jobIndex');
+                        PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                         
                         // Validate and import companies
                         if (importData.customCompanies && typeof importData.customCompanies === 'object') {
@@ -4134,6 +4182,9 @@
                                 }
                             }
                             setCustomCompanies(validCompanies);
+                            StorageUtil.set(APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, validCompanies);
+                            PerformanceUtil.clearCache('jobIndex');
+                            PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                         }
 
                         // Sanitize blocked companies
@@ -4142,6 +4193,9 @@
                                 .filter(name => typeof name === 'string')
                                 .map(name => SecurityUtil.sanitizeInput(name, 200));
                             setBlockedCompanies(sanitized);
+                            try { localStorage.setItem('blockedCompanies', JSON.stringify(sanitized)); } catch {}
+                            PerformanceUtil.clearCache('jobIndex');
+                            PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                         }
                         
                         alert(
@@ -4190,6 +4244,8 @@
         direction = 'desc';
     }
     setSortConfig({ key, direction });
+    // Clear caches so sorting updates immediately
+    PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
 };
 
 const getSortIcon = (columnKey) => {
@@ -4225,7 +4281,7 @@ const jobIndex = PerformanceUtil.memoize('jobIndex', () => {
     return index;
 }, 10000);
 
-const sortedJobs = PerformanceUtil.memoize('sortedJobs', () => {
+const sortedJobs = PerformanceUtil.memoize(`sortedJobs_${sortConfig.key}_${sortConfig.direction}`, () => {
     return PerformanceUtil.measure('sorting', () => {
         return [...jobs].sort((a, b) => {
             if (!sortConfig.key) return 0;
@@ -4236,10 +4292,10 @@ const sortedJobs = PerformanceUtil.memoize('sortedJobs', () => {
             return 0;
         });
     });
-}, 10000);
+}, 1000);
 
 const filteredJobs = PerformanceUtil.memoize(
-    `filteredJobs_${JSON.stringify(filters)}_${sortConfig.key}`,
+    `filteredJobs_${JSON.stringify(filters)}_${sortConfig.key}_${sortConfig.direction}`,
     () => {
         return PerformanceUtil.measure('filtering', () => {
             return sortedJobs.filter(job => {
@@ -4255,7 +4311,7 @@ const filteredJobs = PerformanceUtil.memoize(
             });
         });
     },
-    10000
+    1000
 );
 
 // Log performance metrics periodically and cleanup memory
@@ -4404,21 +4460,6 @@ useEffect(() => {
                                 <span>Job Search Dashboard</span>
                             </div>
                             <div className="header-controls">
-                                <button
-                                    className="theme-toggle"
-                                    onClick={toggleTheme}
-                                    title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-                                >
-                                    {theme === 'light' ? '🌙' : '☀️'}
-                                </button>
-                                <button
-                                    className="theme-toggle"
-                                    onClick={() => setShowPerf(!showPerf)}
-                                    title="Toggle performance metrics"
-                                    style={{ fontSize: '1.2rem' }}
-                                >
-                                    ⚡
-                                </button>
                                 <nav className="nav">
                                     <button className={`nav-btn ${view === "dashboard" ? "active" : ""}`} onClick={() => setView("dashboard")}>Dashboard</button>
                                     <button className={`nav-btn ${view === "companies" ? "active" : ""}`} onClick={() => setView("companies")}>Companies</button>
@@ -4436,6 +4477,21 @@ useEffect(() => {
                                     </button>
                                     <button className="nav-btn" onClick={onImport}>📥 Import</button>
                                 </nav>
+                                <button
+                                    className="theme-toggle"
+                                    onClick={() => setShowPerf(!showPerf)}
+                                    title="Toggle performance metrics"
+                                    style={{ fontSize: '1.2rem' }}
+                                >
+                                    ⚡
+                                </button>
+                                <button
+                                    className="theme-toggle"
+                                    onClick={toggleTheme}
+                                    title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                                >
+                                    {theme === 'light' ? '🌙' : '☀️'}
+                                </button>
                             </div>
                         </div>
                     </header>
