@@ -2732,177 +2732,173 @@
 
             {/* Charts Grid */}
             <div className="charts-section">
-                {/* Medium Charts - Side by Side */}
-    <div className="chart-row">
-        <div className="chart-medium">
-            <ChartCard title="Active Pipeline Status">
-                <FunnelChartComponent 
-                    data={pipelineChartData}
-                />
-            </ChartCard>
-        </div>
-
-        <div className="chart-medium">
-            <ChartCard title="Closure Reasons">
-                <PieChartComponent data={closureChartData} />
-            </ChartCard>
-        </div>
-    </div>
-
-    {/* Large Charts - Full Width */}
-    <div className="chart-large">
-        <ChartCard title="Applications & Response Activity">
-            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <button 
-                    onClick={() => setTimeRange('past30')}
-                    style={{ 
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.85rem',
-                        borderRadius: '6px',
-                        border: timeRange === 'past30' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
-                        background: timeRange === 'past30' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                        color: timeRange === 'past30' ? 'white' : 'var(--text-primary)',
-                        cursor: 'pointer',
-                        fontWeight: timeRange === 'past30' ? '600' : '500',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    Past 30 Days
-                </button>
-                <button 
-                    onClick={() => setTimeRange('past12months')}
-                    style={{ 
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.85rem',
-                        borderRadius: '6px',
-                        border: timeRange === 'past12months' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
-                        background: timeRange === 'past12months' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                        color: timeRange === 'past12months' ? 'white' : 'var(--text-primary)',
-                        cursor: 'pointer',
-                        fontWeight: timeRange === 'past12months' ? '600' : '500',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    Past 12 Months
-                </button>
-                <button 
-                    onClick={() => setTimeRange('thisYear')}
-                    style={{ 
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.85rem',
-                        borderRadius: '6px',
-                        border: timeRange === 'thisYear' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
-                        background: timeRange === 'thisYear' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                        color: timeRange === 'thisYear' ? 'white' : 'var(--text-primary)',
-                        cursor: 'pointer',
-                        fontWeight: timeRange === 'thisYear' ? '600' : '500',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    This Year
-                </button>
-                <button 
-                    onClick={() => setTimeRange('lastYear')}
-                    style={{ 
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.85rem',
-                        borderRadius: '6px',
-                        border: timeRange === 'lastYear' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
-                        background: timeRange === 'lastYear' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                        color: timeRange === 'lastYear' ? 'white' : 'var(--text-primary)',
-                        cursor: 'pointer',
-                        fontWeight: timeRange === 'lastYear' ? '600' : '500',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    Last Year
-                </button>
-                <button 
-                    onClick={() => setTimeRange('all')}
-                    style={{ 
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.85rem',
-                        borderRadius: '6px',
-                        border: timeRange === 'all' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
-                        background: timeRange === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                        color: timeRange === 'all' ? 'white' : 'var(--text-primary)',
-                        cursor: 'pointer',
-                        fontWeight: timeRange === 'all' ? '600' : '500',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    All Time
-                </button>
-            </div>
-            {filteredChartData.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    No data available for this time range
+                {/* Large Charts - Full Width */}
+                <div className="chart-large">
+                    <ChartCard title="Applications & Response Activity">
+                        <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <button 
+                                onClick={() => setTimeRange('past30')}
+                                style={{ 
+                                    padding: '0.4rem 0.8rem',
+                                    fontSize: '0.85rem',
+                                    borderRadius: '6px',
+                                    border: timeRange === 'past30' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
+                                    background: timeRange === 'past30' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                    color: timeRange === 'past30' ? 'white' : 'var(--text-primary)',
+                                    cursor: 'pointer',
+                                    fontWeight: timeRange === 'past30' ? '600' : '500',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                Past 30 Days
+                            </button>
+                            <button 
+                                onClick={() => setTimeRange('past12months')}
+                                style={{ 
+                                    padding: '0.4rem 0.8rem',
+                                    fontSize: '0.85rem',
+                                    borderRadius: '6px',
+                                    border: timeRange === 'past12months' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
+                                    background: timeRange === 'past12months' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                    color: timeRange === 'past12months' ? 'white' : 'var(--text-primary)',
+                                    cursor: 'pointer',
+                                    fontWeight: timeRange === 'past12months' ? '600' : '500',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                Past 12 Months
+                            </button>
+                            <button 
+                                onClick={() => setTimeRange('thisYear')}
+                                style={{ 
+                                    padding: '0.4rem 0.8rem',
+                                    fontSize: '0.85rem',
+                                    borderRadius: '6px',
+                                    border: timeRange === 'thisYear' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
+                                    background: timeRange === 'thisYear' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                    color: timeRange === 'thisYear' ? 'white' : 'var(--text-primary)',
+                                    cursor: 'pointer',
+                                    fontWeight: timeRange === 'thisYear' ? '600' : '500',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                This Year
+                            </button>
+                            <button 
+                                onClick={() => setTimeRange('lastYear')}
+                                style={{ 
+                                    padding: '0.4rem 0.8rem',
+                                    fontSize: '0.85rem',
+                                    borderRadius: '6px',
+                                    border: timeRange === 'lastYear' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
+                                    background: timeRange === 'lastYear' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                    color: timeRange === 'lastYear' ? 'white' : 'var(--text-primary)',
+                                    cursor: 'pointer',
+                                    fontWeight: timeRange === 'lastYear' ? '600' : '500',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                Last Year
+                            </button>
+                            <button 
+                                onClick={() => setTimeRange('all')}
+                                style={{ 
+                                    padding: '0.4rem 0.8rem',
+                                    fontSize: '0.85rem',
+                                    borderRadius: '6px',
+                                    border: timeRange === 'all' ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
+                                    background: timeRange === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                    color: timeRange === 'all' ? 'white' : 'var(--text-primary)',
+                                    cursor: 'pointer',
+                                    fontWeight: timeRange === 'all' ? '600' : '500',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                All Time
+                            </button>
+                        </div>
+                        {filteredChartData.length === 0 ? (
+                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                No data available for this time range
+                            </div>
+                        ) : (
+                            <TripleLineChartComponent
+                                data={filteredChartData}
+                                label1="Applications"
+                                label2="Responses and rejections"
+                                label3="Actual Callbacks"
+                                color1="#6b8aff"
+                                color2="#f59e0b"
+                                color3="#10b981"
+                                useDailyData={shouldUseDailyData(filteredChartData)}
+                            />
+                        )}
+                    </ChartCard>
                 </div>
-            ) : (
-                <TripleLineChartComponent
-                    data={filteredChartData}
-                    label1="Applications"
-                    label2="Responses and rejections"
-                    label3="Actual Callbacks"
-                    color1="#6b8aff"
-                    color2="#f59e0b"
-                    color3="#10b981"
-                    useDailyData={shouldUseDailyData(filteredChartData)}
-                />
-            )}
-        </ChartCard>
-    </div>
-</div>
 
-           
-            <div className="chart-row" style={{ marginTop: '2rem' }}>
+                {/* Medium Charts - Side by Side */}
+                <div className="chart-row">
+                    <div className="chart-medium">
+                        <ChartCard title="Active Pipeline Status">
+                            <FunnelChartComponent 
+                                data={pipelineChartData}
+                            />
+                        </ChartCard>
+                    </div>
 
-                {/* Responses by Progression Chart */}
-            <div className="chart-medium">
-                <ChartCard title="Responses by Progression">
-                    <PieChartComponent data={progressionChartData} />
-                </ChartCard>
-            </div>
-            
-             {/* Application Status Table */}
-                <div className="chart-medium">
-                     <div className="stat-card">
-                        <h3 style={{ 
-                            fontSize: '0.8rem', 
-                            color: 'var(--text-tertiary)', 
-                            marginBottom: '0.75rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.1em',
-                            fontWeight: '600'
-                        }}>
-                            Application Statuses
-                        </h3>
-                        <div className="table-container" style={{ border: 'none', background: 'transparent' }}>
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>Status</th>
-                                        <th>Count</th>
-                                        <th>Percentage</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {STATUSES.map(status => {
-                                        const count = jobs.filter(j => j.status === status).length;
-                                        return (
-                                            <tr key={status}>
-                                                <td><StatusBadge status={status} /></td>
-                                                <td><strong>{count}</strong></td>
-                                                <td>{jobs.length > 0 ? Math.round((count / jobs.length) * 100) : 0}%</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                    <div className="chart-medium">
+                        <ChartCard title="Closure Reasons">
+                            <PieChartComponent data={closureChartData} />
+                        </ChartCard>
+                    </div>
+                </div>
+
+                {/* Responses and Statuses Side by Side */}
+                <div className="chart-row">
+                    <div className="chart-medium">
+                        <ChartCard title="Responses by Progression">
+                            <PieChartComponent data={progressionChartData} />
+                        </ChartCard>
+                    </div>
+
+                    <div className="chart-medium">
+                        <div className="stat-card">
+                            <h3 style={{ 
+                                fontSize: '0.8rem', 
+                                color: 'var(--text-tertiary)', 
+                                marginBottom: '0.75rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.1em',
+                                fontWeight: '600'
+                            }}>
+                                Application Statuses
+                            </h3>
+                            <div className="table-container" style={{ border: 'none', background: 'transparent' }}>
+                                <table className="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Status</th>
+                                            <th>Count</th>
+                                            <th>Percentage</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {STATUSES.map(status => {
+                                            const count = jobs.filter(j => j.status === status).length;
+                                            return (
+                                                <tr key={status}>
+                                                    <td><StatusBadge status={status} /></td>
+                                                    <td><strong>{count}</strong></td>
+                                                    <td>{jobs.length > 0 ? Math.round((count / jobs.length) * 100) : 0}%</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
-           
             </div>
 
             {/* Insights */}
