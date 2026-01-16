@@ -338,6 +338,8 @@
 
         .search-input {
             min-width: 200px;
+            width: 100%;
+            padding-right: 2.5rem;
         }
 
         .btn {
@@ -744,9 +746,10 @@
         }
 
         .search-container {
-    position: relative;
-    flex: 1;
-}
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+        }
     .clear-search {
         position: absolute;
         right: 0.5rem;
@@ -3279,6 +3282,30 @@
         };
 
         /**
+         * UI Utility Module
+         * Provides UI-related helper functions
+         */
+        const UIUtil = {
+            /**
+             * Convert URLs in text to clickable links
+             * @param {string} text - Text containing URLs
+             * @returns {string} HTML string with clickable links
+             */
+            linkify(text) {
+                if (!text) return '';
+                
+                // Regular expression to detect URLs
+                const urlPattern = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
+                
+                return text.replace(urlPattern, (url) => {
+                    // Add protocol if missing (for www. links)
+                    const href = url.startsWith('http') ? url : `http://${url}`;
+                    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: underline;">${url}</a>`;
+                });
+            }
+        };
+
+        /**
          * Performance & Observability Module
          * Tracks metrics, provides caching, throttling, and monitoring
          * 
@@ -4911,14 +4938,23 @@ useEffect(() => {
                     <div className="action-bar" style={{ marginTop: "1rem" }}>
                         <div className="filters-section" style={{ flex: 1 }}>
                             <div className="filters-row" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
-                                <input
-                                    type="text"
-                                    className="search-input"
-                                    placeholder="Search roles or companies..."
-                                    value={filters.search}
-                                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                                    style={{ minWidth: "250px" }}
-                                />
+                                <div className="search-container">
+                                    <input
+                                        type="text"
+                                        className="search-input"
+                                        placeholder="Search roles or companies..."
+                                        value={filters.search}
+                                        onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                                    />
+                                    {filters.search && (
+                                        <button 
+                                            className="clear-search"
+                                            onClick={() => setFilters({ ...filters, search: "" })}
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
                                 
                                 {/* Status Multiselect */}
                                 <div style={{ position: "relative" }}>
@@ -5654,8 +5690,7 @@ useEffect(() => {
                                                     padding: '0.75rem',
                                                     whiteSpace: 'pre-wrap',
                                                     wordBreak: 'break-word'
-                                                }}>
-                                                    {viewModalJob.notes ? UIUtil.linkify(viewModalJob.notes) : '-'}
+                                                }} dangerouslySetInnerHTML={{ __html: viewModalJob.notes ? UIUtil.linkify(viewModalJob.notes) : '-' }}>
                                                 </div>
                                             )}
                                         </div>
@@ -6067,11 +6102,11 @@ useEffect(() => {
                                 <>
                                     <div 
                                         style={{
-                                            border: `2px dashed ${dragActive ? '#6b8aff' : '#2a3248'}`,
+                                            border: `2px dashed ${dragActive ? 'var(--accent-primary)' : 'var(--border-primary)'}`,
                                             borderRadius: '8px',
                                             padding: '3rem 2rem',
                                             textAlign: 'center',
-                                            background: dragActive ? '#1e2639' : '#0f1420',
+                                            background: dragActive ? 'var(--bg-hover)' : 'var(--bg-tertiary)',
                                             transition: 'all 0.3s'
                                         }}
                                         onDragEnter={handleDrag}
@@ -6080,10 +6115,10 @@ useEffect(() => {
                                         onDrop={handleDrop}
                                     >
                                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📁</div>
-                                        <h3 style={{ marginBottom: '0.5rem', color: '#e4e6eb' }}>
+                                        <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                                             Drop your backup file here
                                         </h3>
-                                        <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
                                             or click to browse
                                         </p>
                                         <input
@@ -6100,27 +6135,27 @@ useEffect(() => {
                                 </>
                             ) : (
                                 <>
-                                    <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#1a1f35', borderRadius: '6px', border: '1px solid #2a3248' }}>
-                                        <h3 style={{ color: '#6b8aff', marginBottom: '1rem' }}>📊 Preview</h3>
+                                    <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
+                                        <h3 style={{ color: 'var(--accent-primary)', marginBottom: '1rem' }}>📊 Preview</h3>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                             <div>
-                                                <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Jobs to import</div>
-                                                <div style={{ color: '#e4e6eb', fontSize: '1.5rem', fontWeight: 'bold' }}>{preview.jobCount}</div>
+                                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Jobs to import</div>
+                                                <div style={{ color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: 'bold' }}>{preview.jobCount}</div>
                                             </div>
                                             <div>
-                                                <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Custom categories</div>
-                                                <div style={{ color: '#e4e6eb', fontSize: '1.5rem', fontWeight: 'bold' }}>{preview.companyCount}</div>
+                                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Custom categories</div>
+                                                <div style={{ color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: 'bold' }}>{preview.companyCount}</div>
                                             </div>
                                         </div>
-                                        <div style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
                                             Backup created: {preview.exportDate}
                                         </div>
                                         {preview.companies.length > 0 && (
                                             <div style={{ marginTop: '1rem' }}>
-                                                <div style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
                                                     Companies (first 10):
                                                 </div>
-                                                <div style={{ color: '#e4e6eb', fontSize: '0.9rem' }}>
+                                                <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                                                     {preview.companies.join(', ')}
                                                     {preview.jobCount > 10 && '...'}
                                                 </div>
@@ -6128,17 +6163,17 @@ useEffect(() => {
                                         )}
                                     </div>
 
-                                    <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#1a1f35', borderRadius: '6px', border: '1px solid #2a3248' }}>
-                                        <h3 style={{ color: '#6b8aff', marginBottom: '1rem' }}>Import Mode</h3>
+                                    <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
+                                        <h3 style={{ color: 'var(--accent-primary)', marginBottom: '1rem' }}>Import Mode</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                             <label style={{ 
                                                 display: 'flex', 
                                                 alignItems: 'flex-start', 
                                                 cursor: 'pointer',
                                                 padding: '0.75rem',
-                                                background: importMode === 'merge' ? '#2a3248' : 'transparent',
+                                                background: importMode === 'merge' ? 'var(--bg-hover)' : 'transparent',
                                                 borderRadius: '6px',
-                                                border: `1px solid ${importMode === 'merge' ? '#6b8aff' : '#2a3248'}`
+                                                border: `1px solid ${importMode === 'merge' ? 'var(--accent-primary)' : 'var(--border-primary)'}`
                                             }}>
                                                 <input
                                                     type="radio"
@@ -6149,10 +6184,10 @@ useEffect(() => {
                                                     style={{ marginRight: '0.75rem', marginTop: '0.25rem' }}
                                                 />
                                                 <div>
-                                                    <div style={{ color: '#e4e6eb', fontWeight: '600', marginBottom: '0.25rem' }}>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>
                                                         🔄 Merge (Recommended for historical data)
                                                     </div>
-                                                    <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                                                         Adds new jobs and companies without deleting existing data. Skips duplicates based on company + role + date.
                                                     </div>
                                                 </div>
@@ -6163,9 +6198,9 @@ useEffect(() => {
                                                 alignItems: 'flex-start', 
                                                 cursor: 'pointer',
                                                 padding: '0.75rem',
-                                                background: importMode === 'replace' ? '#2a3248' : 'transparent',
+                                                background: importMode === 'replace' ? 'var(--bg-hover)' : 'transparent',
                                                 borderRadius: '6px',
-                                                border: `1px solid ${importMode === 'replace' ? '#6b8aff' : '#2a3248'}`
+                                                border: `1px solid ${importMode === 'replace' ? 'var(--accent-primary)' : 'var(--border-primary)'}`
                                             }}>
                                                 <input
                                                     type="radio"
@@ -6176,10 +6211,10 @@ useEffect(() => {
                                                     style={{ marginRight: '0.75rem', marginTop: '0.25rem' }}
                                                 />
                                                 <div>
-                                                    <div style={{ color: '#e4e6eb', fontWeight: '600', marginBottom: '0.25rem' }}>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>
                                                         ⚠️ Replace All
                                                     </div>
-                                                    <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                                                         Deletes all current data and replaces with backup. Use when restoring from backup.
                                                     </div>
                                                 </div>
