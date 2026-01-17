@@ -3378,30 +3378,7 @@
 
         // Target companies data
         const DEFAULT_COMPANIES = {
-            "Fintech": [
-                { name: "Stripe", url: "https://stripe.com/jobs/search" }
-            ],
-            "Data Infra": [
-                { name: "Snowflake", url: "https://careers.snowflake.com/us/en/search-results" }
-            ],
-            "AI/ML": [
-                { name: "Anthropic", url: "https://www.anthropic.com/careers/jobs" },
-                { name: "OpenAI", url: "https://openai.com/careers/search" }
-            ],
-            "Big Tech": [
-                { name: "Microsoft", url: "https://apply.careers.microsoft.com/careers" },
-                { name: "Google", url: "https://www.google.com/about/careers/applications/jobs/results/" }
-            ],
-            "Enterprise SaaS": [
-                { name: "ServiceNow", url: "https://careers.servicenow.com/careers/jobs" }
-            ],
-            "Marketplaces": [
-                { name: "DoorDash", url: "https://careers.doordash.com/jobs" },
-                { name: "Zillow", url: "https://zillow.wd5.myworkdayjobs.com/Zillow_Group_External" }
-            ],
-            "Media/Streaming": [
-                { name: "Netflix", url: "https://explore.jobs.netflix.net/careers" }
-            ]
+            
         };
 
         /* ===========================================
@@ -5140,23 +5117,22 @@
                                         return prev;
                                     });
                                     
-                                    // Move companies to None if there are any
-                                    if (companiesInCategory.length > 0) {
-                                        setCustomCategories(prev => {
-                                            const updated = { ...prev };
+                                    // Move companies to None and remove category in a single update
+                                    setCustomCategories(prev => {
+                                        const updated = { ...prev };
+                                        
+                                        // Move companies to None if there are any
+                                        if (companiesInCategory.length > 0) {
                                             if (!updated['None']) {
                                                 updated['None'] = [];
                                             }
                                             // Add companies that were in the deleted category
                                             updated['None'] = [...updated['None'], ...companiesInCategory];
-                                            return updated;
-                                        });
-                                    }
-                                    
-                                    // If it's a custom category, also remove it from customCategories
-                                    setCustomCategories(prev => {
-                                        const updated = { ...prev };
+                                        }
+                                        
+                                        // Remove the deleted category
                                         delete updated[categoryToDelete];
+                                        
                                         return updated;
                                     });
                                     return;
@@ -5993,28 +5969,8 @@
                                         <th onClick={() => requestSort('company')} style={{ cursor: 'pointer' }}>
                                             Company{getSortIcon('company')}
                                         </th>
-                                        <th style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <th style={{ display: 'none' }}>
                                             Category
-                                            <button
-                                                onClick={() => setShowCategoryManager(true)}
-                                                title="Manage categories"
-                                                aria-label="Manage categories"
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: 'var(--text-secondary)',
-                                                    cursor: 'pointer',
-                                                    fontSize: '1rem',
-                                                    padding: '0',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    transition: 'color 0.2s'
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                                            >
-                                                ⚙️
-                                            </button>
                                         </th>
                                         <th onClick={() => requestSort('fitLevel')} style={{ cursor: 'pointer' }} title="Fit level reflects how well this company tends to match your goals based on role availability, location, hiring patterns, or past experience. It's subjective and can change over time.">
                                             Fit level{getSortIcon('fitLevel')}
@@ -6067,7 +6023,7 @@
                                                         {company.name}&nbsp;<span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span>
                                                     </a>
                                                 </td>
-                                                <td>
+                                                <td style={{ display: 'none' }}>
                                                     <span className={getCategoryClassName(companyCategory)}>
                                                         {companyCategory}
                                                     </span>
