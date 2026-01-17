@@ -5080,7 +5080,53 @@
                             customCompanies={customCompanies}
                             blockedCompanies={blockedCompanies}
                             onUpdateCompany={(companyName, updates) => {
-                                // Find which category this company belongs to in allCompanies
+                                // Handle category management operations
+                                if (updates.newCategory) {
+                                    // Add new category
+                                    setCustomCompanies(prev => ({
+                                        ...prev,
+                                        [updates.newCategory]: []
+                                    }));
+                                    return;
+                                }
+
+                                if (updates.deleteCategory) {
+                                    // Delete category - move companies to Uncategorized
+                                    const categoryToDelete = updates.deleteCategory;
+                                    const companiesInCategory = allCompanies[categoryToDelete] || [];
+                                    
+                                    setCustomCompanies(prev => {
+                                        const updated = { ...prev };
+                                        
+                                        // Remove the category
+                                        delete updated[categoryToDelete];
+                                        
+                                        // Move companies to Uncategorized
+                                        if (companiesInCategory.length > 0) {
+                                            updated['Uncategorized'] = updated['Uncategorized'] || [];
+                                            updated['Uncategorized'].push(...companiesInCategory);
+                                        }
+                                        
+                                        return updated;
+                                    });
+                                    return;
+                                }
+
+                                if (updates.renameCategory) {
+                                    // Rename category
+                                    const { oldName, newName } = updates.renameCategory;
+                                    const companiesInCategory = allCompanies[oldName] || [];
+                                    
+                                    setCustomCompanies(prev => {
+                                        const updated = { ...prev };
+                                        updated[newName] = companiesInCategory;
+                                        delete updated[oldName];
+                                        return updated;
+                                    });
+                                    return;
+                                }
+
+                                // Standard company update
                                 let categoryFound = null;
                                 let companyFound = null;
 
@@ -5370,6 +5416,10 @@
             const [showAppliedDropdown, setShowAppliedDropdown] = useState(false);
             const [selectedFitLevels, setSelectedFitLevels] = useState([]);
             const [showFitLevelDropdown, setShowFitLevelDropdown] = useState(false);
+            const [showCategoryManager, setShowCategoryManager] = useState(false);
+            const [newCategoryName, setNewCategoryName] = useState('');
+            const [editingCategoryName, setEditingCategoryName] = useState(null);
+            const [editingCategoryNewName, setEditingCategoryNewName] = useState('');
 
 
             if (!companies || typeof companies !== 'object') {
@@ -5444,6 +5494,34 @@
                 onUpdateCompany(companyName, { fitLevel: newValue });
             };
 
+            const handleAddCategory = () => {
+                if (!newCategoryName.trim()) return;
+                if (allCategories.includes(newCategoryName)) {
+                    alert('Category already exists');
+                    return;
+                }
+                // Create new category with empty array
+                onUpdateCompany(null, { newCategory: newCategoryName });
+                setNewCategoryName('');
+            };
+
+            const handleDeleteCategory = (categoryName) => {
+                if (!confirm(`Delete category "${categoryName}"? Companies in this category will be moved to "Uncategorized".`)) return;
+                // Call a function to handle category deletion
+                onUpdateCompany(null, { deleteCategory: categoryName });
+            };
+
+            const handleRenameCategory = (oldName, newName) => {
+                if (!newName.trim()) return;
+                if (allCategories.includes(newName) && newName !== oldName) {
+                    alert('Category name already exists');
+                    return;
+                }
+                onUpdateCompany(null, { renameCategory: { oldName, newName } });
+                setEditingCategoryName(null);
+                setEditingCategoryNewName('');
+            };
+
             // Sort the filtered list
             const sortedCompaniesList = [...filteredCompaniesList].sort((a, b) => {
                 if (!sortConfig.key) return 0;
@@ -5483,7 +5561,7 @@
 
             return (
                 <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <h1 style={{ color: "#6b8aff" }}>Target companies</h1>
                             <span style={{ color: "#9ca3af", fontSize: "0.9rem", marginLeft: "0.5rem" }}>
@@ -5491,7 +5569,7 @@
                             </span>
                         </div>
 
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#9ca3af", cursor: "pointer" }}>
                                 <input
                                     type="checkbox"
@@ -5851,7 +5929,29 @@
                                         <th onClick={() => requestSort('company')} style={{ cursor: 'pointer' }}>
                                             Company{getSortIcon('company')}
                                         </th>
-                                        <th>Category</th>
+                                        <th style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            Category
+                                            <button
+                                                onClick={() => setShowCategoryManager(true)}
+                                                title="Manage categories"
+                                                aria-label="Manage categories"
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: 'var(--text-secondary)',
+                                                    cursor: 'pointer',
+                                                    fontSize: '1rem',
+                                                    padding: '0',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    transition: 'color 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                            >
+                                                ⚙️
+                                            </button>
+                                        </th>
                                         <th onClick={() => requestSort('fitLevel')} style={{ cursor: 'pointer' }} title="Fit level reflects how well this company tends to match your goals based on role availability, location, hiring patterns, or past experience. It's subjective and can change over time.">
                                             Fit level{getSortIcon('fitLevel')}
                                         </th>
@@ -6060,6 +6160,179 @@
                                         setEditingCompany(null);
                                     }}>
                                         Save
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Category Manager Modal */}
+                    {showCategoryManager && (
+                        <div className="modal-overlay" onClick={() => setShowCategoryManager(false)}>
+                            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                                <div className="modal-header">
+                                    <h2>Manage categories</h2>
+                                    <button className="modal-close" onClick={() => setShowCategoryManager(false)}>×</button>
+                                </div>
+                                <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
+                                    {/* Add new category */}
+                                    <div style={{ marginBottom: "2rem", padding: "1rem", background: "var(--bg-elevated)", borderRadius: "10px" }}>
+                                        <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Add new category</h3>
+                                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Category name"
+                                                value={newCategoryName}
+                                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                                onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: "0.5rem",
+                                                    background: "var(--bg-primary)",
+                                                    border: "1px solid var(--border-primary)",
+                                                    borderRadius: "6px",
+                                                    color: "var(--text-primary)",
+                                                    fontSize: "0.9rem"
+                                                }}
+                                                autoFocus
+                                            />
+                                            <button 
+                                                onClick={handleAddCategory}
+                                                className="btn"
+                                                style={{ whiteSpace: "nowrap" }}
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Existing categories */}
+                                    <div>
+                                        <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Categories ({allCategories.length})</h3>
+                                        {allCategories.length === 0 ? (
+                                            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>No categories yet</p>
+                                        ) : (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                                {allCategories.map(category => {
+                                                    const companyCount = companies[category]?.length || 0;
+                                                    const isEditing = editingCategoryName === category;
+
+                                                    return (
+                                                        <div
+                                                            key={category}
+                                                            style={{
+                                                                display: "flex",
+                                                                justifyContent: "space-between",
+                                                                alignItems: "center",
+                                                                padding: "0.75rem",
+                                                                background: "var(--bg-elevated)",
+                                                                borderRadius: "8px",
+                                                                border: "1px solid var(--border-primary)"
+                                                            }}
+                                                        >
+                                                            {isEditing ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={editingCategoryNewName}
+                                                                    onChange={(e) => setEditingCategoryNewName(e.target.value)}
+                                                                    onKeyPress={(e) => e.key === 'Enter' && handleRenameCategory(category, editingCategoryNewName)}
+                                                                    style={{
+                                                                        flex: 1,
+                                                                        padding: "0.5rem",
+                                                                        background: "var(--bg-primary)",
+                                                                        border: "1px solid var(--accent-primary)",
+                                                                        borderRadius: "4px",
+                                                                        color: "var(--text-primary)",
+                                                                        marginRight: "0.5rem"
+                                                                    }}
+                                                                    autoFocus
+                                                                />
+                                                            ) : (
+                                                                <div>
+                                                                    <span style={{ fontWeight: "500", color: "var(--text-primary)" }}>{category}</span>
+                                                                    <span style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>
+                                                                        ({companyCount} {companyCount === 1 ? 'company' : 'companies'})
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                                                                {isEditing ? (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => handleRenameCategory(category, editingCategoryNewName)}
+                                                                            style={{
+                                                                                padding: "0.4rem 0.8rem",
+                                                                                background: "var(--accent-primary)",
+                                                                                color: "white",
+                                                                                border: "none",
+                                                                                borderRadius: "4px",
+                                                                                cursor: "pointer",
+                                                                                fontSize: "0.8rem"
+                                                                            }}
+                                                                        >
+                                                                            Save
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => setEditingCategoryName(null)}
+                                                                            style={{
+                                                                                padding: "0.4rem 0.8rem",
+                                                                                background: "var(--bg-hover)",
+                                                                                color: "var(--text-secondary)",
+                                                                                border: "1px solid var(--border-primary)",
+                                                                                borderRadius: "4px",
+                                                                                cursor: "pointer",
+                                                                                fontSize: "0.8rem"
+                                                                            }}
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setEditingCategoryName(category);
+                                                                                setEditingCategoryNewName(category);
+                                                                            }}
+                                                                            style={{
+                                                                                padding: "0.4rem 0.8rem",
+                                                                                background: "var(--bg-hover)",
+                                                                                color: "var(--text-secondary)",
+                                                                                border: "1px solid var(--border-primary)",
+                                                                                borderRadius: "4px",
+                                                                                cursor: "pointer",
+                                                                                fontSize: "0.8rem"
+                                                                            }}
+                                                                        >
+                                                                            Edit
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteCategory(category)}
+                                                                            style={{
+                                                                                padding: "0.4rem 0.8rem",
+                                                                                background: "rgba(255, 0, 0, 0.1)",
+                                                                                color: "#ff4444",
+                                                                                border: "1px solid rgba(255, 0, 0, 0.2)",
+                                                                                borderRadius: "4px",
+                                                                                cursor: "pointer",
+                                                                                fontSize: "0.8rem"
+                                                                            }}
+                                                                        >
+                                                                            Delete
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="modal-footer">
+                                    <button className="btn" onClick={() => setShowCategoryManager(false)}>
+                                        Close
                                     </button>
                                 </div>
                             </div>
