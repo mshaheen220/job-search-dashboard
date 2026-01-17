@@ -4252,6 +4252,41 @@
                 }
             };
 
+            // Lightweight confetti without external dependencies (colored paper bits)
+            const launchConfetti = () => {
+                const container = document.createElement('div');
+                container.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9999';
+                document.body.appendChild(container);
+
+                const colors = ['#6b8aff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+                const total = 36;
+
+                for (let i = 0; i < total; i++) {
+                    const piece = document.createElement('div');
+                    const width = 6 + Math.random() * 6;
+                    const height = width * (1.4 + Math.random() * 0.6);
+                    const startLeft = Math.random() * 100;
+                    const rotateStart = Math.random() * 360;
+
+                    piece.style.cssText = `position:absolute;top:-16px;left:${startLeft}%;width:${width}px;height:${height}px;background:${colors[i % colors.length]};opacity:1;border-radius:2px;transform:translate3d(0,0,0) rotate(${rotateStart}deg);`;
+                    piece.style.mixBlendMode = 'screen';
+                    container.appendChild(piece);
+
+                    const xOffset = (Math.random() - 0.5) * 220;
+                    const yOffset = window.innerHeight * 0.98 + Math.random() * 200;
+                    const rotateEnd = rotateStart + (Math.random() - 0.5) * 1440;
+
+                    requestAnimationFrame(() => {
+                        piece.style.transition = `transform 2.2s ease-out, opacity 2.2s ease-out`;
+                        piece.style.transitionDelay = `${Math.random() * 0.16}s`;
+                        piece.style.transform = `translate(${xOffset}px, ${yOffset}px) rotate(${rotateEnd}deg)`;
+                        piece.style.opacity = '0.4';
+                    });
+                }
+
+                setTimeout(() => container.remove(), 2600);
+            };
+
             const updateJob = (updatedJob) => {
                 try {
                     const startTime = performance.now();
@@ -4261,7 +4296,10 @@
                     
                     // Validate updated job data
                     const validatedJob = SecurityUtil.validateJobData(updatedJob);
-                    
+
+                    const wasApplied = jobs.find(j => j.id === validatedJob.id)?.status === JOB_STATUSES.APPLIED;
+                    const nowInProgress = validatedJob.status === JOB_STATUSES.IN_PROGRESS;
+
                     setJobs(jobs.map(j => j.id === validatedJob.id ? validatedJob : j));
                     
                     // Clear related caches
@@ -4270,6 +4308,10 @@
                     const duration = performance.now() - startTime;
                     LoggerUtil.trackPerformance('updateJob', duration, true);
                     LoggerUtil.trackAction('job_updated', 'job_management', { jobId: validatedJob.id });
+
+                    if (wasApplied && nowInProgress) {
+                        launchConfetti();
+                    }
                     
                     setShowModal(false);
                     setEditingJob(null);
@@ -4764,7 +4806,7 @@ useEffect(() => {
                                     Thank me
                                 </a>
                                 <a 
-                                    href="https://github.com/jburgh" 
+                                    href="https://github.com/jburgh/job-search-dashboard/deployments" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                     className="footer-link"
@@ -4776,7 +4818,7 @@ useEffect(() => {
                                     >
                                         <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
                                     </svg>
-                                    GitHub
+                                    Change log
                                 </a>
                             </div>
                         </div>
@@ -4801,7 +4843,7 @@ useEffect(() => {
                     <header className="header">
                         <div className="header-content">
                             <div className="logo">
-                                <div className="logo-icon">🎯</div>
+                                <div className="theme-toggle">🎯</div>
                                 <span>Job Search Dashboard</span>
                             </div>
                             <div className="header-controls">
@@ -5316,6 +5358,19 @@ useEffect(() => {
                 setSelectedPriorities([]);
                 setDateRangeFilter({ start: '', end: '' });
             };
+
+            const handleQuickClose = (job) => {
+                const today = new Date().toISOString().split('T')[0];
+                const proceed = confirm(`Close "${job.role}" at ${job.company} as Rejected today?`);
+                if (!proceed) return;
+
+                onUpdateJob({
+                    ...job,
+                    status: JOB_STATUSES.CLOSED,
+                    closeReason: CLOSE_REASONS.REJECTED,
+                    followUp: today
+                });
+            };
             
             const toggleColumn = (key) => {
                 setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }));
@@ -5653,7 +5708,7 @@ useEffect(() => {
                     {filteredJobs.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-state-icon">🔍</div>
-                            <h3>No applications yet</h3>
+                            <h3>No applications. Let's change that!</h3>
                             <p>Add an application or adjust your filters</p>
                         </div>
                     ) : (
@@ -5807,6 +5862,27 @@ useEffect(() => {
                                                             }}
                                                         >
                                                             ✏️
+                                                        </button>
+                                                        <button 
+                                                            className="icon-btn" 
+                                                            onClick={() => handleQuickClose(job)}
+                                                            title="Close as rejected today"
+                                                            style={{
+                                                                background: "var(--bg-tertiary)",
+                                                                border: "1px solid var(--border-primary)",
+                                                                width: "32px",
+                                                                height: "32px",
+                                                                borderRadius: "6px",
+                                                                cursor: "pointer",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                justifyContent: "center",
+                                                                transition: "all 0.2s ease",
+                                                                color: "var(--text-secondary)",
+                                                                fontSize: "0.9rem"
+                                                            }}
+                                                        >
+                                                            🚫
                                                         </button>
                                                         <button 
                                                             className="icon-btn danger" 
