@@ -4343,6 +4343,14 @@
             });
             // Add blockedCompanies state
             const [customCompanies, setCustomCompanies] = useState({});
+            const [customCategories, setCustomCategories] = useState(() => {
+                const saved = localStorage.getItem("customCategories");
+                return saved ? JSON.parse(saved) : {};
+            });
+            const [deletedCategories, setDeletedCategories] = useState(() => {
+                const saved = localStorage.getItem("deletedCategories");
+                return saved ? JSON.parse(saved) : [];
+            });
             const [blockedCompanies, setBlockedCompanies] = useState(() => {
                 const saved = localStorage.getItem("blockedCompanies");
                 return saved ? JSON.parse(saved) : [];
@@ -4467,16 +4475,26 @@
                         StorageUtil.set(APP_CONFIG.STORAGE_KEYS.JOBS, jobs);
                         StorageUtil.set(APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, customCompanies);
                         localStorage.setItem('blockedCompanies', JSON.stringify(blockedCompanies));
+                        localStorage.setItem('customCategories', JSON.stringify(customCategories));
+                        localStorage.setItem('deletedCategories', JSON.stringify(deletedCategories));
                     } catch (e) {
                         console.warn('Failed to flush data on unload:', e);
                     }
                 };
                 window.addEventListener('beforeunload', flushOnUnload);
                 return () => window.removeEventListener('beforeunload', flushOnUnload);
-            }, [jobs, customCompanies, blockedCompanies]);
+            }, [jobs, customCompanies, blockedCompanies, customCategories, deletedCategories]);
             // Merge default and custom companies
-            // Start with hardcoded companies
-            const allCompanies = { ...DEFAULT_COMPANIES };
+            // Start with hardcoded companies and merge custom categories
+            const mergedCompanies = { ...DEFAULT_COMPANIES, ...customCategories };
+            
+            // Filter out deleted categories
+            const allCompanies = {};
+            Object.keys(mergedCompanies).forEach(category => {
+                if (!deletedCategories.includes(category)) {
+                    allCompanies[category] = mergedCompanies[category];
+                }
+            });
 
             // Merge in custom company edits (URL, name, and fitLevel overrides)
             Object.entries(customCompanies).forEach(([companyName, customData]) => {
@@ -5079,11 +5097,12 @@
                             jobs={jobs}
                             customCompanies={customCompanies}
                             blockedCompanies={blockedCompanies}
+                            deletedCategories={deletedCategories}
                             onUpdateCompany={(companyName, updates) => {
                                 // Handle category management operations
                                 if (updates.newCategory) {
                                     // Add new category
-                                    setCustomCompanies(prev => ({
+                                    setCustomCategories(prev => ({
                                         ...prev,
                                         [updates.newCategory]: []
                                     }));
@@ -5091,22 +5110,35 @@
                                 }
 
                                 if (updates.deleteCategory) {
-                                    // Delete category - move companies to Uncategorized
+                                    // Delete category - move companies to None
                                     const categoryToDelete = updates.deleteCategory;
                                     const companiesInCategory = allCompanies[categoryToDelete] || [];
                                     
-                                    setCustomCompanies(prev => {
-                                        const updated = { ...prev };
-                                        
-                                        // Remove the category
-                                        delete updated[categoryToDelete];
-                                        
-                                        // Move companies to Uncategorized
-                                        if (companiesInCategory.length > 0) {
-                                            updated['Uncategorized'] = updated['Uncategorized'] || [];
-                                            updated['Uncategorized'].push(...companiesInCategory);
+                                    // Add to deleted categories list
+                                    setDeletedCategories(prev => {
+                                        if (!prev.includes(categoryToDelete)) {
+                                            return [...prev, categoryToDelete];
                                         }
-                                        
+                                        return prev;
+                                    });
+                                    
+                                    // Move companies to None if there are any
+                                    if (companiesInCategory.length > 0) {
+                                        setCustomCategories(prev => {
+                                            const updated = { ...prev };
+                                            if (!updated['None']) {
+                                                updated['None'] = [];
+                                            }
+                                            // Add companies that were in the deleted category
+                                            updated['None'] = [...updated['None'], ...companiesInCategory];
+                                            return updated;
+                                        });
+                                    }
+                                    
+                                    // If it's a custom category, also remove it from customCategories
+                                    setCustomCategories(prev => {
+                                        const updated = { ...prev };
+                                        delete updated[categoryToDelete];
                                         return updated;
                                     });
                                     return;
@@ -5117,7 +5149,7 @@
                                     const { oldName, newName } = updates.renameCategory;
                                     const companiesInCategory = allCompanies[oldName] || [];
                                     
-                                    setCustomCompanies(prev => {
+                                    setCustomCategories(prev => {
                                         const updated = { ...prev };
                                         updated[newName] = companiesInCategory;
                                         delete updated[oldName];
@@ -5401,7 +5433,7 @@
         };
 
         // Companies Component
-        function Companies({ companies, jobs, customCompanies, blockedCompanies, onUpdateCompany, onDeleteCompany, onAddJob, onAddCompany, onViewCompanyJobs, onUnhideCompany }) {
+        function Companies({ companies, jobs, customCompanies, blockedCompanies, deletedCategories, onUpdateCompany, onDeleteCompany, onAddJob, onAddCompany, onViewCompanyJobs, onUnhideCompany }) {
             const [searchTerm, setSearchTerm] = useState("");
             const [sortConfig, setSortConfig] = useState({ key: 'company', direction: 'asc' });
             const [editingCompany, setEditingCompany] = useState(null);
@@ -5496,6 +5528,10 @@
 
             const handleAddCategory = () => {
                 if (!newCategoryName.trim()) return;
+                if (deletedCategories.includes(newCategoryName)) {
+                    alert("You can't recreate a category with the same name as one you've deleted. Choose a different category name.");
+                    return;
+                }
                 if (allCategories.includes(newCategoryName)) {
                     alert('Category already exists');
                     return;
@@ -5506,7 +5542,11 @@
             };
 
             const handleDeleteCategory = (categoryName) => {
-                if (!confirm(`Delete category "${categoryName}"? Companies in this category will be moved to "Uncategorized".`)) return;
+                if (categoryName === 'None') {
+                    alert("You can't delete the \"None\" category.");
+                    return;
+                }
+                if (!confirm(`Delete category "${categoryName}"? Companies in this category will be moved to "None".`)) return;
                 // Call a function to handle category deletion
                 onUpdateCompany(null, { deleteCategory: categoryName });
             };
@@ -6290,7 +6330,8 @@
                                                                 ) : (
                                                                     <>
                                                                         <button
-                                                                            onClick={() => {
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
                                                                                 setEditingCategoryName(category);
                                                                                 setEditingCategoryNewName(category);
                                                                             }}
@@ -6307,7 +6348,10 @@
                                                                             Edit
                                                                         </button>
                                                                         <button
-                                                                            onClick={() => handleDeleteCategory(category)}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleDeleteCategory(category);
+                                                                            }}
                                                                             style={{
                                                                                 padding: "0.4rem 0.8rem",
                                                                                 background: "rgba(255, 0, 0, 0.1)",
