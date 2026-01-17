@@ -9,9 +9,8 @@
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-size='96'>🎯</text></svg>">
 
-    <!-- Security Headers -->
+    <!-- Security Headers (X-Frame-Options must be set via HTTP header, not meta tag) -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="DENY">
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <meta name="referrer" content="strict-origin-when-cross-origin">
 
@@ -1154,6 +1153,7 @@
             position: relative;
             flex: 1;
             min-width: 250px;
+            max-width: 400px;
         }
 
         .clear-search {
@@ -4071,6 +4071,7 @@
             debounce(fn, delay = 300) {
                 let timeoutId;
                 let lastCallTime = 0;
+                const self = this;
 
                 return function debounced(...args) {
                     const now = Date.now();
@@ -4080,7 +4081,9 @@
                     }
 
                     timeoutId = setTimeout(() => {
-                        this.metrics.throttledCalls++;
+                        if (self && self.metrics) {
+                            self.metrics.throttledCalls++;
+                        }
                         fn.apply(this, args);
                     }, delay);
                 };
@@ -5243,14 +5246,7 @@
                                     </button>
                                     <button className="nav-btn" onClick={onImport}>📥 Import</button>
                                 </nav>
-                                <button
-                                    className="theme-toggle"
-                                    onClick={() => setShowPerf(!showPerf)}
-                                    title="Toggle performance metrics"
-                                    style={{ fontSize: '1.2rem' }}
-                                >
-                                    ⚡
-                                </button>
+
                                 <button
                                     className="theme-toggle"
                                     onClick={() => window.open('https://github.com/jburgh/job-search-dashboard', '_blank')}
@@ -5266,6 +5262,16 @@
                                         <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
                                     </svg>
                                 </button>
+                                
+                                <button
+                                    className="theme-toggle"
+                                    onClick={() => setShowPerf(!showPerf)}
+                                    title="Toggle performance metrics"
+                                    style={{ fontSize: '1.2rem' }}
+                                >
+                                    ⚡
+                                </button>
+                                
                                 <button
                                     className="theme-toggle"
                                     onClick={toggleTheme}
@@ -5355,6 +5361,8 @@
             const [editingCompany, setEditingCompany] = useState(null);
             const [editUrl, setEditUrl] = useState('');
             const [editCompanyName, setEditCompanyName] = useState('');
+            const [editCategory, setEditCategory] = useState('');
+            const [editNewCategory, setEditNewCategory] = useState('');
             const [showHidden, setShowHidden] = useState(false);
             const [selectedCategories, setSelectedCategories] = useState([]);
             const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -5456,6 +5464,23 @@
                 return 0;
             });
 
+            // Close dropdowns when clicking outside
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (showCategoryDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="category"]')) {
+                        setShowCategoryDropdown(false);
+                    }
+                    if (showAppliedDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="applied"]')) {
+                        setShowAppliedDropdown(false);
+                    }
+                    if (showFitLevelDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="fitlevel"]')) {
+                        setShowFitLevelDropdown(false);
+                    }
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [showCategoryDropdown, showAppliedDropdown, showFitLevelDropdown]);
+
             return (
                 <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
@@ -5510,7 +5535,7 @@
                                         alignItems: "center",
                                         justifyContent: "space-between",
                                         gap: "0.5rem",
-                                        minWidth: "140px",
+                                        minWidth: "160px",
                                         cursor: "pointer"
                                     }}
                                 >
@@ -5522,7 +5547,7 @@
                                     <span style={{ fontSize: "0.7rem" }}>▼</span>
                                 </button>
                                 {showCategoryDropdown && (
-                                    <div style={{
+                                    <div data-dropdown="category" style={{
                                         position: "absolute",
                                         top: "calc(100% + 4px)",
                                         left: 0,
@@ -5536,6 +5561,32 @@
                                         maxHeight: "300px",
                                         overflowY: "auto"
                                     }}>
+                                        <button
+                                            onClick={() => setSelectedCategories([])}
+                                            style={{
+                                                width: "100%",
+                                                padding: "0.5rem",
+                                                marginBottom: "0.5rem",
+                                                background: "var(--bg-hover)",
+                                                border: "1px solid var(--border-primary)",
+                                                borderRadius: "6px",
+                                                cursor: "pointer",
+                                                fontSize: "0.85rem",
+                                                color: "var(--text-secondary)",
+                                                fontWeight: "500",
+                                                transition: "all 0.2s"
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = "var(--accent-primary)";
+                                                e.currentTarget.style.color = "white";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = "var(--bg-hover)";
+                                                e.currentTarget.style.color = "var(--text-secondary)";
+                                            }}
+                                        >
+                                            Clear all
+                                        </button>
                                         {allCategories.map(category => (
                                             <label
                                                 key={category}
@@ -5587,7 +5638,7 @@
                                         alignItems: "center",
                                         justifyContent: "space-between",
                                         gap: "0.5rem",
-                                        minWidth: "140px",
+                                        minWidth: "150px",
                                         cursor: "pointer"
                                     }}
                                 >
@@ -5599,7 +5650,7 @@
                                     <span style={{ fontSize: "0.7rem" }}>▼</span>
                                 </button>
                                 {showFitLevelDropdown && (
-                                    <div style={{
+                                    <div data-dropdown="fitlevel" style={{
                                         position: "absolute",
                                         top: "calc(100% + 4px)",
                                         left: 0,
@@ -5611,6 +5662,32 @@
                                         zIndex: 1000,
                                         minWidth: "200px"
                                     }}>
+                                        <button
+                                            onClick={() => setSelectedFitLevels([])}
+                                            style={{
+                                                width: "100%",
+                                                padding: "0.5rem",
+                                                marginBottom: "0.5rem",
+                                                background: "var(--bg-hover)",
+                                                border: "1px solid var(--border-primary)",
+                                                borderRadius: "6px",
+                                                cursor: "pointer",
+                                                fontSize: "0.85rem",
+                                                color: "var(--text-secondary)",
+                                                fontWeight: "500",
+                                                transition: "all 0.2s"
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = "var(--accent-primary)";
+                                                e.currentTarget.style.color = "white";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = "var(--bg-hover)";
+                                                e.currentTarget.style.color = "var(--text-secondary)";
+                                            }}
+                                        >
+                                            Clear all
+                                        </button>
                                         {['Strong', 'Decent', 'Long shot', '—'].map(level => (
                                             <label
                                                 key={level}
@@ -5663,17 +5740,17 @@
                                         alignItems: "center",
                                         justifyContent: "space-between",
                                         gap: "0.5rem",
-                                        minWidth: "140px",
+                                        minWidth: "150px",
                                         cursor: "pointer"
                                     }}
                                 >
                                     <span>
-                                        {appliedFilter === 'all' ? 'Applied?' : (appliedFilter === 'applied' ? 'Applied' : 'Not applied')}
+                                        {appliedFilter === 'all' ? 'Applied or not' : (appliedFilter === 'applied' ? 'Applied' : 'Not applied')}
                                     </span>
                                     <span style={{ fontSize: "0.7rem" }}>▼</span>
                                 </button>
                                 {showAppliedDropdown && (
-                                    <div style={{
+                                    <div data-dropdown="applied" style={{
                                         position: "absolute",
                                         top: "calc(100% + 4px)",
                                         left: 0,
@@ -5727,6 +5804,34 @@
                                     </div>
                                 )}
                             </div>
+
+                            {/* Clear All Filters */}
+                            {(searchTerm || selectedCategories.length > 0 || selectedFitLevels.length > 0 || appliedFilter !== 'all') && (
+                                <button
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setSelectedCategories([]);
+                                        setSelectedFitLevels([]);
+                                        setAppliedFilter('all');
+                                    }}
+                                    style={{
+                                        background: "transparent",
+                                        color: "var(--accent-primary)",
+                                        border: "none",
+                                        padding: "0.6rem 0.75rem",
+                                        borderRadius: "10px",
+                                        cursor: "pointer",
+                                        fontSize: "0.85rem",
+                                        fontWeight: "500",
+                                        transition: "all 0.2s ease",
+                                        whiteSpace: "nowrap"
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
+                                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+                                >
+                                    Clear all
+                                </button>
+                            )}
 
                         </div>
 
@@ -5795,7 +5900,7 @@
                                             <tr key={company.name} style={isHidden ? { opacity: 0.6, background: 'var(--bg-tertiary)' } : {}}>
                                                 <td>
                                                     <a href={company.url} target="_blank" rel="noopener noreferrer" className="link">
-                                                        {company.name} <span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span>
+                                                        {company.name}&nbsp;<span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span>
                                                     </a>
                                                 </td>
                                                 <td>
@@ -5877,6 +5982,8 @@
                                                         setEditingCompany(company);
                                                         setEditUrl(company.url);
                                                         setEditCompanyName(company.name);
+                                                        setEditCategory(companyCategory);
+                                                        setEditNewCategory('');
                                                     }}>
                                                         Edit
                                                     </button>
@@ -5891,37 +5998,68 @@
                     {editingCompany && (
                         <div className="modal-overlay" onClick={() => setEditingCompany(null)}>
                             <div className="modal" onClick={(e) => e.stopPropagation()}>
-                                <h2>Edit company</h2>
-                                <div className="form-group">
-                                    <label>Company name</label>
-                                    <input
-                                        type="text"
-                                        value={editCompanyName}
-                                        onChange={(e) => setEditCompanyName(e.target.value)}
-                                        placeholder="Company name"
-                                    />
+                                <div className="modal-header">
+                                    <h2>Edit company</h2>
                                 </div>
-                                <div className="form-group">
-                                    <label>URL</label>
-                                    <input
-                                        type="url"
-                                        value={editUrl}
-                                        onChange={(e) => setEditUrl(e.target.value)}
-                                        placeholder="https://company.com/careers"
-                                    />
+                                <div className="modal-body">
+                                    <div className="form-group">
+                                        <label>Company name</label>
+                                        <input
+                                            type="text"
+                                            value={editCompanyName}
+                                            onChange={(e) => setEditCompanyName(e.target.value)}
+                                            placeholder="Company name"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>URL</label>
+                                        <input
+                                            type="url"
+                                            value={editUrl}
+                                            onChange={(e) => setEditUrl(e.target.value)}
+                                            placeholder="https://company.com/careers"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Category</label>
+                                        <select
+                                            value={editCategory}
+                                            onChange={(e) => {
+                                                setEditCategory(e.target.value);
+                                                setEditNewCategory("");
+                                            }}
+                                        >
+                                            {allCategories.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                            <option value="">Create new category</option>
+                                        </select>
+                                    </div>
+                                    {editCategory === "" && (
+                                        <div className="form-group">
+                                            <label>New category name</label>
+                                            <input
+                                                type="text"
+                                                value={editNewCategory}
+                                                onChange={(e) => setEditNewCategory(e.target.value)}
+                                                placeholder="e.g., SaaS Platforms"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="modal-actions">
+                                <div className="modal-footer">
+                                    <button className="btn btn-secondary" onClick={() => setEditingCompany(null)}>
+                                        Cancel
+                                    </button>
                                     <button className="btn" onClick={() => {
                                         onUpdateCompany(editingCompany.name, {
                                             name: editCompanyName,
-                                            url: editUrl
+                                            url: editUrl,
+                                            category: editCategory === "" ? editNewCategory : editCategory
                                         });
                                         setEditingCompany(null);
                                     }}>
                                         Save
-                                    </button>
-                                    <button className="btn btn-secondary" onClick={() => setEditingCompany(null)}>
-                                        Cancel
                                     </button>
                                 </div>
                             </div>
@@ -5951,6 +6089,7 @@
             useEffect(() => {
                 autoExpandTextarea();
             }, [viewModalJob, editedJobData, viewModalEdit]);
+
             // Read-only styling for view mode fields in job modal
             const viewFieldStyle = viewModalEdit ? {} : {
                 background: 'var(--bg-tertiary)',
@@ -5984,6 +6123,20 @@
             const [selectedPriorities, setSelectedPriorities] = useState([]);
             const [showStatusDropdown, setShowStatusDropdown] = useState(false);
             const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+
+            // Close dropdowns when clicking outside
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (showStatusDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="status"]')) {
+                        setShowStatusDropdown(false);
+                    }
+                    if (showPriorityDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="priority"]')) {
+                        setShowPriorityDropdown(false);
+                    }
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [showStatusDropdown, showPriorityDropdown]);
 
             // Apply all filters to jobs
             const filteredJobs = jobs.filter(job => {
@@ -6110,7 +6263,7 @@
                     </div>
 
                     <div className="action-bar" style={{ marginTop: "1rem" }}>
-                        <div className="filters-section" style={{ flex: 1 }}>
+                        <div className="filters-section" data-filter-group="applications-filters" style={{ flex: 1 }}>
                             <div className="filters-row" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
                                 <div className="search-container">
                                     <input
@@ -6140,7 +6293,7 @@
                                             alignItems: "center",
                                             justifyContent: "space-between",
                                             gap: "0.5rem",
-                                            minWidth: "140px",
+                                            minWidth: "160px",
                                             cursor: "pointer"
                                         }}
                                     >
@@ -6152,7 +6305,7 @@
                                         <span style={{ fontSize: "0.7rem" }}>▼</span>
                                     </button>
                                     {showStatusDropdown && (
-                                        <div style={{
+                                        <div data-dropdown="status" style={{
                                             position: "absolute",
                                             top: "calc(100% + 4px)",
                                             left: 0,
@@ -6166,6 +6319,32 @@
                                             maxHeight: "300px",
                                             overflowY: "auto"
                                         }}>
+                                            <button
+                                                onClick={() => setSelectedStatuses([])}
+                                                style={{
+                                                    width: "100%",
+                                                    padding: "0.5rem",
+                                                    marginBottom: "0.5rem",
+                                                    background: "var(--bg-hover)",
+                                                    border: "1px solid var(--border-primary)",
+                                                    borderRadius: "6px",
+                                                    cursor: "pointer",
+                                                    fontSize: "0.85rem",
+                                                    color: "var(--text-secondary)",
+                                                    fontWeight: "500",
+                                                    transition: "all 0.2s"
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = "var(--accent-primary)";
+                                                    e.currentTarget.style.color = "white";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = "var(--bg-hover)";
+                                                    e.currentTarget.style.color = "var(--text-secondary)";
+                                                }}
+                                            >
+                                                Clear all
+                                            </button>
                                             {STATUSES.map(status => (
                                                 <label
                                                     key={status}
@@ -6211,7 +6390,7 @@
                                             alignItems: "center",
                                             justifyContent: "space-between",
                                             gap: "0.5rem",
-                                            minWidth: "140px",
+                                            minWidth: "160px",
                                             cursor: "pointer"
                                         }}
                                     >
@@ -6223,7 +6402,7 @@
                                         <span style={{ fontSize: "0.7rem" }}>▼</span>
                                     </button>
                                     {showPriorityDropdown && (
-                                        <div style={{
+                                        <div data-dropdown="priority" style={{
                                             position: "absolute",
                                             top: "calc(100% + 4px)",
                                             left: 0,
@@ -6235,6 +6414,32 @@
                                             zIndex: 1000,
                                             minWidth: "200px"
                                         }}>
+                                            <button
+                                                onClick={() => setSelectedPriorities([])}
+                                                style={{
+                                                    width: "100%",
+                                                    padding: "0.5rem",
+                                                    marginBottom: "0.5rem",
+                                                    background: "var(--bg-hover)",
+                                                    border: "1px solid var(--border-primary)",
+                                                    borderRadius: "6px",
+                                                    cursor: "pointer",
+                                                    fontSize: "0.85rem",
+                                                    color: "var(--text-secondary)",
+                                                    fontWeight: "500",
+                                                    transition: "all 0.2s"
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = "var(--accent-primary)";
+                                                    e.currentTarget.style.color = "white";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = "var(--bg-hover)";
+                                                    e.currentTarget.style.color = "var(--text-secondary)";
+                                                }}
+                                            >
+                                                Clear all
+                                            </button>
                                             {PRIORITIES.map(priority => (
                                                 <label
                                                     key={priority}
@@ -6291,9 +6496,27 @@
                                     📅 Application date
                                     {activeFiltersCount > 0 && ` (${activeFiltersCount})`}
                                 </button>
-                                {activeFiltersCount > 0 && (
-                                    <button className="btn btn-secondary" onClick={clearFilters}>
-                                        Clear filters
+
+                                {/* Clear All Filters */}
+                                {(filters.search || selectedStatuses.length > 0 || selectedPriorities.length > 0 || dateRangeFilter.start || dateRangeFilter.end) && (
+                                    <button
+                                        onClick={clearFilters}
+                                        style={{
+                                            background: "transparent",
+                                            color: "var(--accent-primary)",
+                                            border: "none",
+                                            padding: "0.6rem 0.75rem",
+                                            borderRadius: "10px",
+                                            cursor: "pointer",
+                                            fontSize: "0.85rem",
+                                            fontWeight: "500",
+                                            transition: "all 0.2s ease",
+                                            whiteSpace: "nowrap"
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
+                                        onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+                                    >
+                                        Clear all
                                     </button>
                                 )}
                             </div>
@@ -6489,7 +6712,7 @@
                                                             <span role="img" aria-label="View">👁️</span>
                                                         </button>
                                                         {job.url ? (
-                                                            <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)", textDecoration: "none" }}>{job.role} <span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span></a>
+                                                            <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)", textDecoration: "none" }}>{job.role}&nbsp;<span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span></a>
                                                         ) : job.role}
                                                     </td>
                                                 )}
