@@ -4499,6 +4499,7 @@
             // Merge in custom company edits (URL, name, and fitLevel overrides)
             Object.entries(customCompanies).forEach(([companyName, customData]) => {
                 let companyFound = false;
+                let originalCategory = null;
 
                 // Migrate old "Applied" category to "None"
                 const normalizedData = {
@@ -4510,10 +4511,27 @@
                 Object.keys(allCompanies).forEach(category => {
                     const companyIndex = allCompanies[category].findIndex(c => c.name === companyName);
                     if (companyIndex !== -1) {
-                        allCompanies[category][companyIndex] = {
-                            ...allCompanies[category][companyIndex],
-                            ...normalizedData
-                        };
+                        originalCategory = category;
+                        
+                        // If category has changed, remove from old category and add to new
+                        if (normalizedData.category && normalizedData.category !== category) {
+                            allCompanies[category].splice(companyIndex, 1);
+                            
+                            // Add to new category
+                            if (!allCompanies[normalizedData.category]) {
+                                allCompanies[normalizedData.category] = [];
+                            }
+                            allCompanies[normalizedData.category].push({
+                                name: companyName,
+                                ...normalizedData
+                            });
+                        } else {
+                            // Category hasn't changed, just update in place
+                            allCompanies[category][companyIndex] = {
+                                ...allCompanies[category][companyIndex],
+                                ...normalizedData
+                            };
+                        }
                         companyFound = true;
                     }
                 });
@@ -5171,7 +5189,13 @@
                                     }
                                 });
 
-                                if (categoryFound && companyFound) {
+                                // If not found in allCompanies and there's a custom entry, use that
+                                if (!companyFound && customCompanies[companyName]) {
+                                    companyFound = customCompanies[companyName];
+                                    categoryFound = customCompanies[companyName].category || 'None';
+                                }
+
+                                if (companyFound) {
                                     // Update customCompanies with the new data
                                     // Structure: customCompanies[companyName] = { ...updates }
                                     setCustomCompanies(prev => ({
@@ -5180,7 +5204,7 @@
                                             ...(prev[companyName] || {}),
                                             ...updates,
                                             name: companyName, // preserve name
-                                            url: companyFound.url, // preserve url if not updating
+                                            url: companyFound.url || updates.url, // preserve url if not updating
                                         }
                                     }));
                                 }
