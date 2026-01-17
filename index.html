@@ -4297,8 +4297,21 @@
                     // Validate updated job data
                     const validatedJob = SecurityUtil.validateJobData(updatedJob);
 
-                    const wasApplied = jobs.find(j => j.id === validatedJob.id)?.status === JOB_STATUSES.APPLIED;
+                    const oldJob = jobs.find(j => j.id === validatedJob.id);
+                    const wasApplied = oldJob?.status === JOB_STATUSES.APPLIED;
                     const nowInProgress = validatedJob.status === JOB_STATUSES.IN_PROGRESS;
+                    
+                    // Check if progression moved forward
+                    const progressionOrder = [
+                        PROGRESSION_STAGES.APPLICATION,
+                        PROGRESSION_STAGES.RECRUITER_SCREEN,
+                        PROGRESSION_STAGES.PARTIAL_LOOP,
+                        PROGRESSION_STAGES.FULL_LOOP,
+                        PROGRESSION_STAGES.OFFER
+                    ];
+                    const oldProgression = oldJob?.progression || PROGRESSION_STAGES.APPLICATION;
+                    const newProgression = validatedJob.progression || PROGRESSION_STAGES.APPLICATION;
+                    const progressionMovedForward = progressionOrder.indexOf(newProgression) > progressionOrder.indexOf(oldProgression);
 
                     setJobs(jobs.map(j => j.id === validatedJob.id ? validatedJob : j));
                     
@@ -4309,7 +4322,7 @@
                     LoggerUtil.trackPerformance('updateJob', duration, true);
                     LoggerUtil.trackAction('job_updated', 'job_management', { jobId: validatedJob.id });
 
-                    if (wasApplied && nowInProgress) {
+                    if ((wasApplied && nowInProgress) || progressionMovedForward) {
                         launchConfetti();
                     }
                     
@@ -6154,26 +6167,42 @@ useEffect(() => {
                                                 }} style={viewFieldStyle} />
                                             </div>
                                             <div className="form-group">
-                                                <label>Priority</label>
-                                                <input type="text" value={viewModalEdit ? editedJobData?.priority || '' : viewModalJob.priority || ''} readOnly={!viewModalEdit} onChange={e => {
-                                                    setEditedJobData({ ...editedJobData, priority: e.target.value });
-                                                }} style={viewFieldStyle} />
-                                            </div>
-                                        </div>
-                                        <div className="form-row">
-                                            <div className="form-group">
                                                 <label>Date applied</label>
                                                 <input type="date" value={viewModalEdit ? editedJobData?.dateApplied || '' : viewModalJob.dateApplied || ''} readOnly={!viewModalEdit} onChange={e => {
                                                     setEditedJobData({ ...editedJobData, dateApplied: e.target.value });
                                                 }} style={viewFieldStyle} />
                                             </div>
+                                        </div>
+                                        <div className="form-row">
                                             <div className="form-group">
                                                 <label>Progression</label>
                                                 <input type="text" value={viewModalEdit ? editedJobData?.progression || '' : viewModalJob.progression || ''} readOnly={!viewModalEdit} onChange={e => {
                                                     setEditedJobData({ ...editedJobData, progression: e.target.value });
                                                 }} style={viewFieldStyle} />
                                             </div>
+                                            <div className="form-group">
+                                                <label>Priority</label>
+                                                <input type="text" value={viewModalEdit ? editedJobData?.priority || '' : viewModalJob.priority || ''} readOnly={!viewModalEdit} onChange={e => {
+                                                    setEditedJobData({ ...editedJobData, priority: e.target.value });
+                                                }} style={viewFieldStyle} />
+                                            </div>
                                         </div>
+                                        {(viewModalJob.closeReason || viewModalJob.followUp) && (
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Close reason</label>
+                                                <input type="text" value={viewModalEdit ? editedJobData?.closeReason || '' : viewModalJob.closeReason || ''} readOnly={!viewModalEdit} onChange={e => {
+                                                    setEditedJobData({ ...editedJobData, closeReason: e.target.value });
+                                                }} style={viewFieldStyle} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Close date</label>
+                                                <input type="date" value={viewModalEdit ? editedJobData?.followUp || '' : viewModalJob.followUp || ''} readOnly={!viewModalEdit} onChange={e => {
+                                                    setEditedJobData({ ...editedJobData, followUp: e.target.value });
+                                                }} style={viewFieldStyle} />
+                                            </div>
+                                        </div>
+                                        )}
                                         <div className="form-row">
                                             <div className="form-group">
                                                 <label>Salary</label>
@@ -6192,12 +6221,6 @@ useEffect(() => {
                                             <label>Contact name</label>
                                             <input type="text" value={viewModalEdit ? editedJobData?.contact || '' : viewModalJob.contact || ''} readOnly={!viewModalEdit} onChange={e => {
                                                 setEditedJobData({ ...editedJobData, contact: e.target.value });
-                                            }} style={viewFieldStyle} />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Close date</label>
-                                            <input type="date" value={viewModalEdit ? editedJobData?.followUp || '' : viewModalJob.followUp || ''} readOnly={!viewModalEdit} onChange={e => {
-                                                setEditedJobData({ ...editedJobData, followUp: e.target.value });
                                             }} style={viewFieldStyle} />
                                         </div>
                                         <div className="form-group">
@@ -6435,53 +6458,63 @@ useEffect(() => {
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label>Priority *</label>
-                                        <select value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })}>
-                                            {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                                        </select>
+                                        <label>Date applied</label>
+                                        <input
+                                            type="date"
+                                            value={formData.dateApplied}
+                                            onChange={(e) => setFormData({ ...formData, dateApplied: e.target.value })}
+                                        />
                                     </div>
                                     
       </div>
 
-{/* Show Progression for "In Progress" (editable) or "Closed" (read-only) */}
-{(formData.status === "In Progress" || formData.status === "Closed") && (
-    <div className="form-group">
-        <label>Progression {formData.status === "Closed" && "(final stage)"}</label>
-        <select 
-            value={formData.progression || ""} 
-            onChange={(e) => setFormData({ ...formData, progression: e.target.value })}
-            disabled={formData.status === "Closed"}
-            style={formData.status === "Closed" ? {backgroundColor: '#2a3248', cursor: 'not-allowed'} : {}}
-        >
-            <option value="">Select progression...</option>
-            {PROGRESSIONS.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-    </div>
-)}
-
-                                {/* Conditional: Show Close Reason if status is "Closed" */}
-                                {formData.status === "Closed" && (
+                                <div className="form-row">
+                                    {(formData.status === "In Progress" || formData.status === "Closed") && (
+                                        <div className="form-group">
+                                            <label>Progression {formData.status === "Closed" && "(final stage)"}</label>
+                                            <select 
+                                                value={formData.progression || ""} 
+                                                onChange={(e) => setFormData({ ...formData, progression: e.target.value })}
+                                                disabled={formData.status === "Closed"}
+                                                style={formData.status === "Closed" ? {backgroundColor: '#2a3248', cursor: 'not-allowed'} : {}}
+                                            >
+                                                <option value="">Select progression...</option>
+                                                {PROGRESSIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
                                     <div className="form-group">
-                                        <label>Close reason *</label>
-                                        <select 
-                                            required
-                                            value={formData.closeReason || ""} 
-                                            onChange={(e) => setFormData({ ...formData, closeReason: e.target.value })}
-                                        >
-                                            <option value="">Select a reason...</option>
-                                            {Object.values(CLOSE_REASONS).map(r => <option key={r} value={r}>{r}</option>)}
+                                        <label>Priority</label>
+                                        <select value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })}>
+                                            {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                                         </select>
                                     </div>
-                                )}
-
-                                <div className="form-group">
-                                    <label>Date applied</label>
-                                    <input
-                                        type="date"
-                                        value={formData.dateApplied}
-                                        onChange={(e) => setFormData({ ...formData, dateApplied: e.target.value })}
-                                    />
                                 </div>
+
+                                {/* Conditional: Show Close Reason and Close Date side by side if status is "Closed" */}
+                                {formData.status === "Closed" && (
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Close reason *</label>
+                                            <select 
+                                                required
+                                                value={formData.closeReason || ""} 
+                                                onChange={(e) => setFormData({ ...formData, closeReason: e.target.value })}
+                                            >
+                                                <option value="">Select a reason...</option>
+                                                {Object.values(CLOSE_REASONS).map(r => <option key={r} value={r}>{r}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Close date</label>
+                                            <input
+                                                type="date"
+                                                value={formData.followUp}
+                                                onChange={(e) => setFormData({ ...formData, followUp: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="form-row">
                                     <div className="form-group">
@@ -6511,15 +6544,6 @@ useEffect(() => {
                                         placeholder="Recruiter or hiring manager"
                                         value={formData.contact}
                                         onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Close date</label>
-                                    <input
-                                        type="date"
-                                        value={formData.followUp}
-                                        onChange={(e) => setFormData({ ...formData, followUp: e.target.value })}
                                     />
                                 </div>
 
