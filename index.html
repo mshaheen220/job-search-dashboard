@@ -4332,6 +4332,7 @@
             });
             const [sortConfig, setSortConfig] = useState({ key: 'dateApplied', direction: 'desc' });
             const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+            const [currentLastModified, setCurrentLastModified] = useState(null);
 
             // Check for updates using Last-Modified header
             useEffect(() => {
@@ -4341,6 +4342,7 @@
                         const lastModified = response.headers.get('Last-Modified');
                         
                         if (lastModified) {
+                            setCurrentLastModified(lastModified);
                             const saved = localStorage.getItem('lastModifiedTime');
                             
                             if (saved && saved !== lastModified) {
@@ -5128,7 +5130,12 @@
                                 </a>
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button onClick={() => window.location.reload()} style={{
+                                <button onClick={() => {
+                                    if (currentLastModified) {
+                                        localStorage.setItem('lastModifiedTime', currentLastModified);
+                                    }
+                                    window.location.reload();
+                                }} style={{
                                     background: 'rgba(255,255,255,0.2)',
                                     color: 'white',
                                     border: '1px solid rgba(255,255,255,0.3)',
@@ -5142,7 +5149,12 @@
                                 }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}>
                                     Refresh now
                                 </button>
-                                <button onClick={() => setShowUpdateBanner(false)} style={{
+                                <button onClick={() => {
+                                    if (currentLastModified) {
+                                        localStorage.setItem('lastModifiedTime', currentLastModified);
+                                    }
+                                    setShowUpdateBanner(false);
+                                }} style={{
                                     background: 'transparent',
                                     color: 'white',
                                     border: 'none',
