@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-
+<!-- Updated at Jan 19 14:30 -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1261,6 +1261,9 @@
             CLOSED: 'Closed'
         };
 
+        // Convenience array of statuses for filters/UI
+        const STATUSES = Object.values(JOB_STATUSES);
+
         // Closure reasons for closed applications
         const CLOSE_REASONS = {
             GHOSTED: 'Ghosted',
@@ -1278,6 +1281,9 @@
             OFFER: 'Offer'
         };
 
+        // Convenience array of progressions for dropdowns
+        const PROGRESSIONS = Object.values(PROGRESSION_STAGES);
+
         // Priority tiers for job applications
         const PRIORITY_TIERS = {
             TIER_1: 'Tier 1',  // Highest priority
@@ -1285,44 +1291,27 @@
             TIER_3: 'Tier 3'   // Lower priority
         };
 
-        // Company fit levels
-        const FIT_LEVELS = {
-            STRONG: { value: 3, label: 'Strong' },
-            DECENT: { value: 2, label: 'Decent' },
-            LONG_SHOT: { value: 1, label: 'Long Shot' },
-            UNSET: { value: null, label: '—' }
-        };
-
-        /* Legacy arrays for backward compatibility - gradually migrate to objects above */
-        const STATUSES = Object.values(JOB_STATUSES);
-        const PROGRESSIONS = Object.values(PROGRESSION_STAGES);
+        // Convenience array of priorities for dropdowns/filters
         const PRIORITIES = Object.values(PRIORITY_TIERS);
 
-        /* ===========================================
-           ANALYTICS MODULE
-           =========================================== */
+        // Company fit levels
+        const FIT_LEVELS = {
+            UNSET: { label: '—', value: null },
+            LOW: { label: 'Low', value: 1 },
+            MEDIUM: { label: 'Medium', value: 2 },
+            HIGH: { label: 'High', value: 3 }
+        };
 
-        window.analytics = (() => {
-
-            // ============================================
-            // HELPER FUNCTIONS
-            // ============================================
-
-            /**
-             * Parse a date string into a Date object
-             * @param {string} dateString - The date string to parse
-             * @returns {Date|null} Parsed date or null if invalid
-             */
-            /**
-             * Parse a date string into a Date object
-             * @param {string} dateString - The date string to parse
-             * @returns {Date|null} Parsed date or null if invalid
-             */
-            const parseDate = (dateString) => {
-                if (!dateString) return null;
-                const date = new Date(dateString);
-                return isNaN(date.getTime()) ? null : date;
-            };
+        /**
+         * Parse a date string into a Date object
+         * @param {string} dateString - The date string to parse
+         * @returns {Date|null} Parsed date or null if invalid
+         */
+        const parseDate = (dateString) => {
+            if (!dateString) return null;
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? null : date;
+        };
 
             /**
              * Calculate ISO week number for a given date
@@ -2100,7 +2089,7 @@
             };
 
             /* Export all analytics functions as public API */
-            return {
+            const baseAnalytics = {
                 // Helper functions
                 parseDate,
                 filterByDateRange,
@@ -2137,11 +2126,9 @@
                 getCompleteAnalytics
             };
 
-        })(); /* End of analytics module */
-
         // Wrap analytics functions with caching for better performance
         const cachedAnalytics = (() => {
-            const original = window.analytics || analytics;
+            const original = baseAnalytics;
 
             return {
                 getJobSearchOverview(jobs) {
@@ -2183,7 +2170,7 @@
         })();
 
         // Use cached analytics globally
-        var analytics = cachedAnalytics;
+        const analytics = cachedAnalytics;
     </script>
 
     <script type="text/babel">
@@ -4345,6 +4332,39 @@
                 search: ""
             });
             const [sortConfig, setSortConfig] = useState({ key: 'dateApplied', direction: 'desc' });
+            const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+
+            // Check for updates using Last-Modified header
+            useEffect(() => {
+                const checkForUpdates = async () => {
+                    try {
+                        const response = await fetch(window.location.href, { method: 'HEAD' });
+                        const lastModified = response.headers.get('Last-Modified');
+                        
+                        if (lastModified) {
+                            const saved = localStorage.getItem('lastModifiedTime');
+                            
+                            if (saved && saved !== lastModified) {
+                                // File has been updated
+                                setShowUpdateBanner(true);
+                            } else if (!saved) {
+                                // First check, just save it
+                                localStorage.setItem('lastModifiedTime', lastModified);
+                            }
+                        }
+                    } catch (error) {
+                        console.debug('Update check failed:', error);
+                    }
+                };
+
+                // Initial check on load
+                checkForUpdates();
+
+                // Check every 5 minutes
+                const interval = setInterval(checkForUpdates, 5 * 60 * 1000);
+                
+                return () => clearInterval(interval);
+            }, []);
 
             // Load jobs from localStorage with security validation
             useEffect(() => {
@@ -4461,8 +4481,7 @@
                 window.addEventListener('beforeunload', flushOnUnload);
                 return () => window.removeEventListener('beforeunload', flushOnUnload);
             }, [jobs, customCompanies, blockedCompanies, customCategories, deletedCategories]);
-            // Merge default and custom companies
-            // Start with hardcoded companies and merge custom categories
+            // Merge default and custom companies (defaults now empty)
             const mergedCompanies = { ...DEFAULT_COMPANIES, ...customCategories };
             
             // Filter out deleted categories
@@ -4478,10 +4497,12 @@
                 let companyFound = false;
                 let originalCategory = null;
 
-                // Migrate old "Applied" category to "None"
+                // Normalize category: migrate old "Applied" and any deleted categories to "None"
+                const normalizedDataCategory = (customData.category === 'Applied' ? 'None' : customData.category);
+                const finalCategory = deletedCategories.includes(normalizedDataCategory) ? 'None' : normalizedDataCategory;
                 const normalizedData = {
                     ...customData,
-                    category: customData.category === 'Applied' ? 'None' : customData.category
+                    category: finalCategory
                 };
 
                 // Find and update the company across all categories
@@ -4495,10 +4516,11 @@
                             allCompanies[category].splice(companyIndex, 1);
                             
                             // Add to new category
-                            if (!allCompanies[normalizedData.category]) {
-                                allCompanies[normalizedData.category] = [];
+                            const targetCategory = deletedCategories.includes(normalizedData.category) ? 'None' : normalizedData.category;
+                            if (!allCompanies[targetCategory]) {
+                                allCompanies[targetCategory] = [];
                             }
-                            allCompanies[normalizedData.category].push({
+                            allCompanies[targetCategory].push({
                                 name: companyName,
                                 ...normalizedData
                             });
@@ -4515,10 +4537,11 @@
 
                 // If company wasn't found in existing categories, add it to its specified category
                 if (!companyFound && normalizedData.category) {
-                    if (!allCompanies[normalizedData.category]) {
-                        allCompanies[normalizedData.category] = [];
+                    const targetCategory = deletedCategories.includes(normalizedData.category) ? 'None' : normalizedData.category;
+                    if (!allCompanies[targetCategory]) {
+                        allCompanies[targetCategory] = [];
                     }
-                    allCompanies[normalizedData.category].push({
+                    allCompanies[targetCategory].push({
                         name: companyName,
                         ...normalizedData
                     });
@@ -5076,6 +5099,64 @@
 
             return (
                 <div className="app">
+                    {showUpdateBanner && (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-hover))',
+                            color: 'white',
+                            padding: '1rem',
+                            zIndex: 10000,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <span style={{ fontSize: '1.2rem' }}>✨</span>
+                                <span>New updates available! Refresh to get the latest features.</span>
+                                <a href="https://github.com/jburgh/job-search-dashboard/commits/main/" target="_blank" rel="noopener noreferrer" style={{
+                                    color: 'white',
+                                    textDecoration: 'underline',
+                                    marginLeft: '0.5rem',
+                                    cursor: 'pointer',
+                                    opacity: 0.9,
+                                    transition: 'opacity 0.2s'
+                                }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.9'}>
+                                    What's new?
+                                </a>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button onClick={() => window.location.reload()} style={{
+                                    background: 'rgba(255,255,255,0.2)',
+                                    color: 'white',
+                                    border: '1px solid rgba(255,255,255,0.3)',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '500',
+                                    transition: 'all 0.2s',
+                                    backdropFilter: 'blur(4px)'
+                                }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}>
+                                    Refresh now
+                                </button>
+                                <button onClick={() => setShowUpdateBanner(false)} style={{
+                                    background: 'transparent',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '0.5rem 1rem',
+                                    cursor: 'pointer',
+                                    fontSize: '1.2rem',
+                                    transition: 'opacity 0.2s'
+                                }} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <Header
                         view={view}
                         setView={setView}
@@ -5093,6 +5174,7 @@
                             customCompanies={customCompanies}
                             blockedCompanies={blockedCompanies}
                             deletedCategories={deletedCategories}
+                            setDeletedCategories={setDeletedCategories}
                             onUpdateCompany={(companyName, updates) => {
                                 // Handle category management operations
                                 if (updates.newCategory) {
@@ -5101,6 +5183,8 @@
                                         ...prev,
                                         [updates.newCategory]: []
                                     }));
+                                    // Ensure category is not marked as deleted
+                                    setDeletedCategories(prev => prev.filter(cat => cat !== updates.newCategory));
                                     return;
                                 }
 
@@ -5135,6 +5219,23 @@
                                         
                                         return updated;
                                     });
+
+                                    // Update per-company overrides to reflect new category
+                                    if (companiesInCategory.length > 0) {
+                                        setCustomCompanies(prev => {
+                                            const updated = { ...prev };
+                                            companiesInCategory.forEach(c => {
+                                                const name = c && c.name;
+                                                if (!name) return;
+                                                updated[name] = {
+                                                    ...(updated[name] || {}),
+                                                    name,
+                                                    category: 'None'
+                                                };
+                                            });
+                                            return updated;
+                                        });
+                                    }
                                     return;
                                 }
 
@@ -5172,17 +5273,48 @@
                                 }
 
                                 if (companyFound) {
-                                    // Update customCompanies with the new data
-                                    // Structure: customCompanies[companyName] = { ...updates }
-                                    setCustomCompanies(prev => ({
-                                        ...prev,
-                                        [companyName]: {
-                                            ...(prev[companyName] || {}),
-                                            ...updates,
-                                            name: companyName, // preserve name
-                                            url: companyFound.url || updates.url, // preserve url if not updating
+                                    // Check if company name is being changed
+                                    if (updates.name && updates.name !== companyName) {
+                                        // Rename the company
+                                        const newName = updates.name;
+                                        
+                                        // Update customCompanies: delete old key, add new key
+                                        setCustomCompanies(prev => {
+                                            const updated = { ...prev };
+                                            
+                                            // Copy old entry to new name
+                                            updated[newName] = {
+                                                ...(updated[companyName] || {}),
+                                                ...updates,
+                                                name: newName
+                                            };
+                                            
+                                            // Delete old entry
+                                            delete updated[companyName];
+                                            
+                                            return updated;
+                                        });
+                                        
+                                        // Update all jobs that reference the old company name
+                                        const jobsToUpdate = jobs.filter(j => j.company === companyName);
+                                        if (jobsToUpdate.length > 0) {
+                                            const updatedJobs = jobs.map(j =>
+                                                j.company === companyName ? { ...j, company: newName } : j
+                                            );
+                                            setJobs(updatedJobs);
                                         }
-                                    }));
+                                    } else {
+                                        // Standard update (no name change)
+                                        setCustomCompanies(prev => ({
+                                            ...prev,
+                                            [companyName]: {
+                                                ...(prev[companyName] || {}),
+                                                ...updates,
+                                                name: companyName, // preserve name
+                                                url: companyFound.url || updates.url, // preserve url if not updating
+                                            }
+                                        }));
+                                    }
                                 }
                             }}
                             onDeleteCompany={(companyName) => {
@@ -5265,7 +5397,7 @@
                                     Thank me
                                 </a>
                                 <a
-                                    href="https://github.com/jburgh/job-search-dashboard/deployments"
+                                    href="https://github.com/jburgh/job-search-dashboard/commits/main/"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="footer-link"
@@ -5433,7 +5565,7 @@
         };
 
         // Companies Component
-        function Companies({ companies, jobs, customCompanies, blockedCompanies, deletedCategories, onUpdateCompany, onDeleteCompany, onAddJob, onAddCompany, onViewCompanyJobs, onUnhideCompany }) {
+        function Companies({ companies, jobs, customCompanies, blockedCompanies, deletedCategories, setDeletedCategories, onUpdateCompany, onDeleteCompany, onAddJob, onAddCompany, onViewCompanyJobs, onUnhideCompany }) {
             const [searchTerm, setSearchTerm] = useState("");
             const [sortConfig, setSortConfig] = useState({ key: 'company', direction: 'asc' });
             const [editingCompany, setEditingCompany] = useState(null);
@@ -5528,14 +5660,12 @@
 
             const handleAddCategory = () => {
                 if (!newCategoryName.trim()) return;
-                if (deletedCategories.includes(newCategoryName)) {
-                    alert("You can't recreate a category with the same name as one you've deleted. Choose a different category name.");
-                    return;
-                }
                 if (allCategories.includes(newCategoryName)) {
                     alert('Category already exists');
                     return;
                 }
+                // Remove from deleted list if user is recreating
+                setDeletedCategories(prev => prev.filter(cat => cat !== newCategoryName));
                 // Create new category with empty array
                 onUpdateCompany(null, { newCategory: newCategoryName });
                 setNewCategoryName('');
@@ -5573,6 +5703,16 @@
                 } else if (sortConfig.key === 'company') {
                     aVal = a.name.toLowerCase();
                     bVal = b.name.toLowerCase();
+                } else if (sortConfig.key === 'category') {
+                    // Find which category each company belongs to
+                    const aCat = Object.entries(companies).find(([_, companiesList]) =>
+                        companiesList.some(c => c.name === a.name)
+                    )?.[0] || 'None';
+                    const bCat = Object.entries(companies).find(([_, companiesList]) =>
+                        companiesList.some(c => c.name === b.name)
+                    )?.[0] || 'None';
+                    aVal = aCat.toLowerCase();
+                    bVal = bCat.toLowerCase();
                 } else if (sortConfig.key === 'fitLevel') {
                     return sortByFitLevel(a.fitLevel || null, b.fitLevel || null, sortConfig.direction);
                 }
@@ -5679,32 +5819,65 @@
                                         maxHeight: "300px",
                                         overflowY: "auto"
                                     }}>
-                                        <button
-                                            onClick={() => setSelectedCategories([])}
-                                            style={{
-                                                width: "100%",
-                                                padding: "0.5rem",
-                                                marginBottom: "0.5rem",
-                                                background: "var(--bg-hover)",
-                                                border: "1px solid var(--border-primary)",
-                                                borderRadius: "6px",
-                                                cursor: "pointer",
-                                                fontSize: "0.85rem",
-                                                color: "var(--text-secondary)",
-                                                fontWeight: "500",
-                                                transition: "all 0.2s"
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.background = "var(--accent-primary)";
-                                                e.currentTarget.style.color = "white";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.background = "var(--bg-hover)";
-                                                e.currentTarget.style.color = "var(--text-secondary)";
-                                            }}
-                                        >
-                                            Clear all
-                                        </button>
+                                        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                                            <button
+                                                onClick={() => setSelectedCategories([])}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: "0.5rem",
+                                                    background: "var(--bg-hover)",
+                                                    border: "1px solid var(--border-primary)",
+                                                    borderRadius: "6px",
+                                                    cursor: "pointer",
+                                                    fontSize: "0.85rem",
+                                                    color: "var(--text-secondary)",
+                                                    fontWeight: "500",
+                                                    transition: "all 0.2s"
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = "var(--accent-primary)";
+                                                    e.currentTarget.style.color = "white";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = "var(--bg-hover)";
+                                                    e.currentTarget.style.color = "var(--text-secondary)";
+                                                }}
+                                            >
+                                                Clear all
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowCategoryDropdown(false);
+                                                    setShowCategoryManager(true);
+                                                }}
+                                                title="Manage categories"
+                                                style={{
+                                                    padding: "0.5rem",
+                                                    width: "36px",
+                                                    height: "36px",
+                                                    background: "var(--bg-hover)",
+                                                    border: "1px solid var(--border-primary)",
+                                                    borderRadius: "6px",
+                                                    cursor: "pointer",
+                                                    fontSize: "1rem",
+                                                    color: "var(--text-secondary)",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    transition: "all 0.2s"
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = "var(--accent-primary)";
+                                                    e.currentTarget.style.color = "white";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = "var(--bg-hover)";
+                                                    e.currentTarget.style.color = "var(--text-secondary)";
+                                                }}
+                                            >
+                                                ⚙️
+                                            </button>
+                                        </div>
                                         {allCategories.map(category => (
                                             <label
                                                 key={category}
@@ -5969,8 +6142,31 @@
                                         <th onClick={() => requestSort('company')} style={{ cursor: 'pointer' }}>
                                             Company{getSortIcon('company')}
                                         </th>
-                                        <th style={{ display: 'none' }}>
-                                            Category
+                                        <th onClick={() => requestSort('category')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            Category{getSortIcon('category')}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowCategoryManager(true);
+                                                }}
+                                                title="Manage categories"
+                                                aria-label="Manage categories"
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: 'var(--text-secondary)',
+                                                    cursor: 'pointer',
+                                                    fontSize: '1rem',
+                                                    padding: '0',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    transition: 'color 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                            >
+                                                ⚙️
+                                            </button>
                                         </th>
                                         <th onClick={() => requestSort('fitLevel')} style={{ cursor: 'pointer' }} title="Fit level reflects how well this company tends to match your goals based on role availability, location, hiring patterns, or past experience. It's subjective and can change over time.">
                                             Fit level{getSortIcon('fitLevel')}
@@ -6023,8 +6219,18 @@
                                                         {company.name}&nbsp;<span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span>
                                                     </a>
                                                 </td>
-                                                <td style={{ display: 'none' }}>
-                                                    <span className={getCategoryClassName(companyCategory)}>
+                                                <td>
+                                                    <span 
+                                                        className={getCategoryClassName(companyCategory)}
+                                                        onClick={() => setSelectedCategories([companyCategory])}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            transition: 'opacity 0.2s'
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                                                        title={`Filter by ${companyCategory}`}
+                                                    >
                                                         {companyCategory}
                                                     </span>
                                                 </td>
@@ -6312,17 +6518,22 @@
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                setEditingCategoryName(category);
-                                                                                setEditingCategoryNewName(category);
+                                                                                if (category !== 'None') {
+                                                                                    setEditingCategoryName(category);
+                                                                                    setEditingCategoryNewName(category);
+                                                                                }
                                                                             }}
+                                                                            disabled={category === 'None'}
+                                                                            title={category === 'None' ? "Can't edit default category" : ""}
                                                                             style={{
                                                                                 padding: "0.4rem 0.8rem",
-                                                                                background: "var(--bg-hover)",
-                                                                                color: "var(--text-secondary)",
+                                                                                background: category === 'None' ? "var(--bg-primary)" : "var(--bg-hover)",
+                                                                                color: category === 'None' ? "var(--text-tertiary)" : "var(--text-secondary)",
                                                                                 border: "1px solid var(--border-primary)",
                                                                                 borderRadius: "4px",
-                                                                                cursor: "pointer",
-                                                                                fontSize: "0.8rem"
+                                                                                cursor: category === 'None' ? "not-allowed" : "pointer",
+                                                                                fontSize: "0.8rem",
+                                                                                opacity: category === 'None' ? 0.5 : 1
                                                                             }}
                                                                         >
                                                                             Edit
@@ -6330,16 +6541,21 @@
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                handleDeleteCategory(category);
+                                                                                if (category !== 'None') {
+                                                                                    handleDeleteCategory(category);
+                                                                                }
                                                                             }}
+                                                                            disabled={category === 'None'}
+                                                                            title={category === 'None' ? "Can't delete default category" : ""}
                                                                             style={{
                                                                                 padding: "0.4rem 0.8rem",
-                                                                                background: "rgba(255, 0, 0, 0.1)",
-                                                                                color: "#ff4444",
-                                                                                border: "1px solid rgba(255, 0, 0, 0.2)",
+                                                                                background: category === 'None' ? "var(--bg-primary)" : "rgba(255, 0, 0, 0.1)",
+                                                                                color: category === 'None' ? "var(--text-tertiary)" : "#ff4444",
+                                                                                border: "1px solid var(--border-primary)",
                                                                                 borderRadius: "4px",
-                                                                                cursor: "pointer",
-                                                                                fontSize: "0.8rem"
+                                                                                cursor: category === 'None' ? "not-allowed" : "pointer",
+                                                                                fontSize: "0.8rem",
+                                                                                opacity: category === 'None' ? 0.5 : 1
                                                                             }}
                                                                         >
                                                                             Delete
