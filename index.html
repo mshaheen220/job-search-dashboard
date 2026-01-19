@@ -3754,17 +3754,20 @@
                     throw new Error(`Import file too large: ${sizeInMB.toFixed(2)}MB (max: ${this.CONFIG.MAX_IMPORT_SIZE_MB}MB)`);
                 }
 
-                let data;
+                let parsed;
                 try {
-                    data = JSON.parse(jsonString);
+                    parsed = JSON.parse(jsonString);
                 } catch (e) {
                     throw new Error('Invalid JSON format: ' + e.message);
                 }
 
-                // Structure validation
-                if (!data || typeof data !== 'object') {
+                // Structure validation - handle both old flat and new nested format
+                if (!parsed || typeof parsed !== 'object') {
                     throw new Error('Invalid backup format: must be an object');
                 }
+
+                // Support both old format (flat) and new format (with data wrapper)
+                const data = parsed.data || parsed;
 
                 if (!data.jobs || !Array.isArray(data.jobs)) {
                     throw new Error('Invalid backup format: jobs array required');
@@ -6456,9 +6459,9 @@
                                                         aria-label={`Fit level: ${getFitLevelLabel(company.fitLevel || null)}`}
                                                     >
                                                         <option value="—">—</option>
-                                                        <option value="Strong">Strong</option>
-                                                        <option value="Decent">Decent</option>
-                                                        <option value="Long Shot">Long shot</option>
+                                                        <option value="High">High</option>
+                                                        <option value="Medium">Medium</option>
+                                                        <option value="Low">Low</option>
                                                     </select>
                                                 </td>
                                                 <td>
@@ -8222,7 +8225,10 @@
                 reader.onload = (e) => {
                     try {
                         const content = e.target.result;
-                        const data = JSON.parse(content);
+                        const parsed = JSON.parse(content);
+
+                        // Handle both old flat format and new nested format (with data wrapper)
+                        const data = parsed.data || parsed;
 
                         if (!data.jobs || !Array.isArray(data.jobs)) {
                             alert('Invalid backup file: missing jobs data');
@@ -8233,7 +8239,7 @@
                         setPreview({
                             jobCount: data.jobs.length,
                             companyCount: data.customCompanies ? Object.keys(data.customCompanies).length : 0,
-                            exportDate: data.exportDate ? new Date(data.exportDate).toLocaleString() : 'Unknown',
+                            exportDate: parsed.exportDate || data.exportDate ? new Date(parsed.exportDate || data.exportDate).toLocaleString() : 'Unknown',
                             companies: data.jobs.map(j => j.company).filter((v, i, a) => a.indexOf(v) === i).slice(0, 10)
                         });
                     } catch (error) {
