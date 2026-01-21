@@ -1,6 +1,12 @@
 window.APP_CONFIG = {
     VERSION: '1.0',
     APP_NAME: 'Job Search Dashboard',
+    AUTHOR_NAME: 'Michael Shaheen',
+    URLS: {
+        GITHUB: 'https://github.com/mshaheen220/job-search-dashboard',
+        PAYPAL: 'https://paypal.me/mlshaheen',
+        PERSONAL: 'http://www.michaelshaheen.com'
+    },
     STORAGE_KEYS: {
         JOBS: 'jobTrackerJobs',
         CUSTOM_COMPANIES: 'jobTrackerCustomCompanies',
@@ -49,10 +55,10 @@ window.PRIORITY_TIERS = {
 window.PRIORITIES = Object.values(window.PRIORITY_TIERS);
 
 window.FIT_LEVELS = {
-    UNSET: { label: '—', value: null },
-    LOW: { label: 'Low', value: 1 },
-    MEDIUM: { label: 'Medium', value: 2 },
-    HIGH: { label: 'High', value: 3 }
-};
+            UNSET: { label: '—', value: null },
+            LOW: { label: 'Long Shot', value: 1 },
+            MEDIUM: { label: 'Decent', value: 2 },
+            HIGH: { label: 'Great', value: 3 }
+        };
 
 window.DEFAULT_COMPANIES = {};
