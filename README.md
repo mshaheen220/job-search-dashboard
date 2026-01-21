@@ -46,10 +46,10 @@ For the best experience, serve the app locally:
 
 ```bash
 # Using Python 3
-python -m http.server 8000
+python3 -m http.server 8000
 
 # Using Python 2
-python -m SimpleHTTPServer 8000
+python2 -m SimpleHTTPServer 8000
 
 # Using Node.js (if you have http-server installed)
 npx http-server
