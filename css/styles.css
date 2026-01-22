@@ -15,6 +15,7 @@
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
+    --new: #1094b9;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
     --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
@@ -38,6 +39,7 @@
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
+    --new: #1094b9;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
@@ -1029,4 +1031,26 @@ body {
 .footer-icon {
     width: 18px;
     height: 18px;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+    cursor:help;
+}
+
+.status-dot.new {
+    background-color: var(--new);
+}
+
+.status-dot.warning {
+    background-color: var(--warning);
+}
+
+.status-dot.stale {
+    background-color: var(--danger);
 }

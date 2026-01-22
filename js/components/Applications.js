@@ -50,6 +50,34 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
     const toggleColumn = (key) => { setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] })); };
     const toggleStatus = (status) => { setSelectedStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]); };
     const togglePriority = (priority) => { setSelectedPriorities(prev => prev.includes(priority) ? prev.filter(p => p !== priority) : [...prev, priority]); };
+    const getAgeIcon = (dateStr, status) => {
+        if (!dateStr) return null;
+        const applied = new Date(dateStr + 'T00:00:00');
+        const now = new Date();
+        const diffTime = now - applied;
+        const diffHours = diffTime / (1000 * 60 * 60);
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+        let className = 'status-dot';
+        let title = '';
+
+        if (diffHours < 36) {
+            className += ' new';
+            title = "New application (< 36 hours)";
+        } else if (status !== 'Closed') {
+            if (diffDays > 14) {
+                className += ' stale';
+                title = "Stale (> 2 weeks)";
+            } else if (diffDays > 7) {
+                className += ' warning';
+                title = "Warning (> 1 week)";
+            }
+        }
+        
+        if (className === 'status-dot') return <span className="status-dot" style={{ backgroundColor: 'transparent' }} />;
+
+        return <span className={className} title={title} />;
+    };
     const columns = [
         { key: 'company', label: 'Company' }, { key: 'role', label: 'Role' }, { key: 'status', label: 'Status' }, { key: 'priority', label: 'Priority' }, { key: 'dateApplied', label: 'Date applied' }, { key: 'salary', label: 'Salary' }, { key: 'closeReason', label: 'Reason' }, { key: 'progression', label: 'Progress' }, { key: 'followUp', label: 'Close date' }, { key: 'notes', label: 'Notes' }, { key: 'resumeUrl', label: 'Resume' }, { key: 'coverLetterUrl', label: 'Cover letter' }, { key: 'fitLevel', label: 'Fit Level' }
     ];
@@ -135,7 +163,7 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
                                         {visibleColumns.status && <td><window.StatusBadge status={job.status} /></td>}
                                         {visibleColumns.priority && <td><window.PriorityBadge priority={job.priority} /></td>}
                                         {visibleColumns.fitLevel && <td>{window.getFitLevelLabel(job.fitLevel)}</td>}
-                                        {visibleColumns.dateApplied && <td>{job.dateApplied ? new Date(job.dateApplied + 'T00:00:00').toLocaleDateString() : '-'}</td>}
+                                        {visibleColumns.dateApplied && <td>{job.dateApplied ? <div style={{ display: 'flex', alignItems: 'center' }}>{getAgeIcon(job.dateApplied, job.status)} {new Date(job.dateApplied + 'T00:00:00').toLocaleDateString()}</div> : '-'}</td>}
                                         {visibleColumns.salary && <td>{job.salary || "-"}</td>}
                                         {visibleColumns.closeReason && <td>{job.closeReason || "-"}</td>}
                                         {visibleColumns.progression && <td>{job.progression || "-"}</td>}
