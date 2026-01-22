@@ -69,15 +69,42 @@ window.JobModal = ({ job, onSave, onClose }) => {
     );
 };
 
-window.CompanyModal = ({ onSave, onClose, existingCategories }) => {
+window.CompanyModal = ({ onSave, onClose, existingCategories, categoryColors }) => {
     const { useState } = React;
-    const [formData, setFormData] = useState({ name: "", url: "", category: existingCategories[0] || "", newCategory: "", fitLevel: null });
+    const [formData, setFormData] = useState({ name: "", url: "", categories: [], newCategory: "", newCategoryColor: "#3b82f6", fitLevel: null });
+    const [newCategoryColors, setNewCategoryColors] = useState({});
+    
+    const toggleCategory = (cat) => {
+        setFormData(prev => {
+            const exists = prev.categories.includes(cat);
+            return { ...prev, categories: exists ? prev.categories.filter(c => c !== cat) : [...prev.categories, cat] };
+        });
+    };
+
+    const handleAddNewCategory = () => {
+        if (!formData.newCategory.trim()) return;
+        const cat = formData.newCategory.trim();
+        toggleCategory(cat);
+        setNewCategoryColors(prev => ({ ...prev, [cat]: formData.newCategoryColor }));
+        setFormData(prev => ({ ...prev, newCategory: "", newCategoryColor: "#3b82f6" }));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         try {
-            const category = formData.newCategory.trim() || formData.category;
-            if (!category || !formData.name.trim() || !formData.url.trim()) { alert("Please fill in all required fields"); return; }
-            onSave({ name: formData.name.trim(), url: formData.url.trim(), category: category.trim(), fitLevel: formData.fitLevel });
+            if ((formData.categories.length === 0 && !formData.newCategory.trim()) || !formData.name.trim() || !formData.url.trim()) { alert("Please fill in all required fields"); return; }
+            const categories = [...formData.categories];
+            if (formData.newCategory.trim()) categories.push(formData.newCategory.trim());
+            
+            onSave({ 
+                name: formData.name.trim(), 
+                url: formData.url.trim(), 
+                categories: categories, 
+                fitLevel: formData.fitLevel,
+                newCategory: formData.newCategory.trim(),
+                newCategoryColor: formData.newCategoryColor,
+                newCategoryColors: newCategoryColors
+            });
         } catch (error) { console.error("Error submitting company:", error); alert("Error saving company. Please try again."); }
     };
     return (
@@ -88,8 +115,40 @@ window.CompanyModal = ({ onSave, onClose, existingCategories }) => {
                     <div className="modal-body">
                         <div className="form-group"><label>Company name *</label><input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Acme Corp" /></div>
                         <div className="form-group"><label>Careers page URL *</label><input type="url" required value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} placeholder="https://company.com/careers/jobs" /></div>
-                        <div className="form-group"><label>Category *</label><select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value, newCategory: "" })} required={!formData.newCategory}>{existingCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}<option value="">Create new category</option></select></div>
-                        {formData.category === "" && (<div className="form-group"><label>New category name *</label><input type="text" required={formData.category === ""} value={formData.newCategory} onChange={(e) => setFormData({ ...formData, newCategory: e.target.value })} placeholder="e.g., SaaS Platforms" /></div>)}
+                        
+                        <div className="form-group">
+                            <label>Categories *</label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                {existingCategories.map(cat => {
+                                    const isSelected = formData.categories.includes(cat);
+                                    const color = categoryColors && categoryColors[cat] ? categoryColors[cat] : 'var(--accent-primary)';
+                                    return (
+                                        <button 
+                                            type="button" 
+                                            key={cat} 
+                                            onClick={() => toggleCategory(cat)}
+                                            style={{
+                                                padding: '0.25rem 0.75rem',
+                                                borderRadius: '12px',
+                                                border: isSelected ? `2px solid ${color}` : '1px solid var(--border-primary)',
+                                                background: isSelected ? (categoryColors && categoryColors[cat] ? color + '20' : 'var(--bg-secondary)') : 'var(--bg-tertiary)',
+                                                color: isSelected ? color : 'var(--text-secondary)',
+                                                cursor: 'pointer',
+                                                fontSize: '0.85rem'
+                                            }}
+                                        >
+                                            {cat}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <input type="text" value={formData.newCategory} onChange={(e) => setFormData({ ...formData, newCategory: e.target.value })} placeholder="Or create new category..." style={{ flex: 1 }} />
+                                {formData.newCategory && <input type="color" value={formData.newCategoryColor} onChange={(e) => setFormData({ ...formData, newCategoryColor: e.target.value })} style={{ width: '40px', height: '40px', padding: 0, border: 'none', background: 'none' }} title="Choose category color" />}
+                                <button type="button" onClick={handleAddNewCategory} className="btn btn-sm" disabled={!formData.newCategory.trim()}>Add</button>
+                            </div>
+                        </div>
+
                         <div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={formData.fitLevel} onChange={(val) => setFormData({ ...formData, fitLevel: val })} /></div>
                     </div>
                     <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button><button type="submit" className="btn">Add company</button></div>

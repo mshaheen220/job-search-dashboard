@@ -183,10 +183,20 @@ window.SecurityUtil = {
     validateCompanyData(company) {
         if (!company || typeof company !== 'object') throw new Error('Invalid company data');
         if (!company.name || typeof company.name !== 'string') throw new Error('Company name is required');
+        
+        let categories = [];
+        if (Array.isArray(company.categories)) {
+            categories = company.categories.map(c => this.sanitizeInput(c, 100));
+        } else if (company.category && typeof company.category === 'string') {
+            categories = [this.sanitizeInput(company.category, 100)];
+        } else {
+            categories = ['None'];
+        }
+
         return {
             name: this.sanitizeInput(company.name, 200),
             url: company.url ? this.validateURL(company.url) : '',
-            category: this.sanitizeInput(company.category || 'None', 100),
+            categories: categories,
             fitLevel: company.fitLevel !== undefined ? this.validateFitLevel(company.fitLevel) : null
         };
     },
