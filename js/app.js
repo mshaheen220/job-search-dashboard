@@ -12,6 +12,7 @@ function App() {
     const [customCategories, setCustomCategories] = useState(() => { const saved = localStorage.getItem("customCategories"); return saved ? JSON.parse(saved) : {}; });
     const [deletedCategories, setDeletedCategories] = useState(() => { const saved = localStorage.getItem("deletedCategories"); return saved ? JSON.parse(saved) : []; });
     const [blockedCompanies, setBlockedCompanies] = useState(() => { const saved = localStorage.getItem("blockedCompanies"); return saved ? JSON.parse(saved) : []; });
+    const [categoryColors, setCategoryColors] = useState(() => { const saved = localStorage.getItem("categoryColors"); return saved ? JSON.parse(saved) : {}; });
     const [showModal, setShowModal] = useState(false);
     const [showCompanyModal, setShowCompanyModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
@@ -75,39 +76,42 @@ function App() {
     useEffect(() => { if (jobs.length > 0) debouncedSaveJobs(jobs); }, [jobs]);
     useEffect(() => { debouncedSaveCompanies(customCompanies); }, [customCompanies]);
     useEffect(() => { const saveBlocked = window.PerformanceUtil.debounce(function () { localStorage.setItem("blockedCompanies", JSON.stringify(blockedCompanies)); }, 500); saveBlocked(); }, [blockedCompanies]);
+    useEffect(() => { localStorage.setItem("categoryColors", JSON.stringify(categoryColors)); }, [categoryColors]);
     useEffect(() => {
         const flushOnUnload = () => {
-            try { window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.JOBS, jobs); window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, customCompanies); localStorage.setItem('blockedCompanies', JSON.stringify(blockedCompanies)); localStorage.setItem('customCategories', JSON.stringify(customCategories)); localStorage.setItem('deletedCategories', JSON.stringify(deletedCategories)); } catch (e) { console.warn('Failed to flush data on unload:', e); }
+            try { window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.JOBS, jobs); window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, customCompanies); localStorage.setItem('blockedCompanies', JSON.stringify(blockedCompanies)); localStorage.setItem('customCategories', JSON.stringify(customCategories)); localStorage.setItem('deletedCategories', JSON.stringify(deletedCategories)); localStorage.setItem('categoryColors', JSON.stringify(categoryColors)); } catch (e) { console.warn('Failed to flush data on unload:', e); }
         };
         window.addEventListener('beforeunload', flushOnUnload);
         return () => window.removeEventListener('beforeunload', flushOnUnload);
-    }, [jobs, customCompanies, blockedCompanies, customCategories, deletedCategories]);
+    }, [jobs, customCompanies, blockedCompanies, customCategories, deletedCategories, categoryColors]);
 
     const mergedCompanies = { ...window.DEFAULT_COMPANIES, ...customCategories };
     const allCompanies = {};
     Object.keys(mergedCompanies).forEach(category => { if (!deletedCategories.includes(category)) allCompanies[category] = mergedCompanies[category]; });
+    
+    // Ensure custom companies are distributed to their categories
     Object.entries(customCompanies).forEach(([companyName, customData]) => {
-        let companyFound = false;
-        const normalizedDataCategory = (customData.category === 'Applied' ? 'None' : customData.category);
-        const finalCategory = deletedCategories.includes(normalizedDataCategory) ? 'None' : normalizedDataCategory;
-        const normalizedData = { ...customData, category: finalCategory };
+        // Handle legacy data or single category
+        let categories = customData.categories || (customData.category ? [customData.category] : ['None']);
+        
+        // Filter out deleted categories unless it's the only one, then default to None
+        categories = categories.map(c => deletedCategories.includes(c) ? 'None' : c);
+        if (categories.length === 0) categories = ['None'];
+        categories = [...new Set(categories)]; // Unique
+
+        const normalizedData = { ...customData, categories };
+
+        // Remove this company from all lists first to avoid duplicates if it was in DEFAULT_COMPANIES
         Object.keys(allCompanies).forEach(category => {
             const companyIndex = allCompanies[category].findIndex(c => c.name === companyName);
-            if (companyIndex !== -1) {
-                if (normalizedData.category && normalizedData.category !== category) {
-                    allCompanies[category].splice(companyIndex, 1);
-                    const targetCategory = deletedCategories.includes(normalizedData.category) ? 'None' : normalizedData.category;
-                    if (!allCompanies[targetCategory]) allCompanies[targetCategory] = [];
-                    allCompanies[targetCategory].push({ name: companyName, ...normalizedData });
-                } else { allCompanies[category][companyIndex] = { ...allCompanies[category][companyIndex], ...normalizedData }; }
-                companyFound = true;
-            }
+            if (companyIndex !== -1) allCompanies[category].splice(companyIndex, 1);
         });
-        if (!companyFound && normalizedData.category) {
-            const targetCategory = deletedCategories.includes(normalizedData.category) ? 'None' : normalizedData.category;
-            if (!allCompanies[targetCategory]) allCompanies[targetCategory] = [];
-            allCompanies[targetCategory].push({ name: companyName, ...normalizedData });
-        }
+
+        // Add to appropriate categories
+        categories.forEach(category => {
+            if (!allCompanies[category]) allCompanies[category] = [];
+            allCompanies[category].push({ name: companyName, ...normalizedData });
+        });
     });
     jobs.forEach(job => {
         if (!job.company) return;
@@ -124,10 +128,149 @@ function App() {
         }
     });
 
-    const addJob = (job) => { try { const startTime = performance.now(); window.SecurityUtil.checkRateLimit(); const validatedJob = window.SecurityUtil.validateJobData(job); if (jobs.length >= window.SecurityUtil.CONFIG.MAX_JOBS_COUNT) throw new Error(`Maximum jobs limit (${window.SecurityUtil.CONFIG.MAX_JOBS_COUNT}) reached`); setJobs(prevJobs => [...prevJobs, validatedJob]); window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); const duration = performance.now() - startTime; window.LoggerUtil.trackPerformance('addJob', duration, true); window.LoggerUtil.trackAction('job_added', 'job_management', { jobId: validatedJob.id }); setShowModal(false); setEditingJob(null); } catch (error) { window.LoggerUtil.error('Error adding job', { error: error.message }); window.SecurityUtil.handleError(error, 'adding job'); } };
-    const addCompany = (company) => { try { const startTime = performance.now(); window.SecurityUtil.checkRateLimit(); const validatedCompany = window.SecurityUtil.validateCompanyData(company); const currentCount = Object.keys(customCompanies).length; if (currentCount >= window.SecurityUtil.CONFIG.MAX_COMPANIES_COUNT) throw new Error(`Maximum companies limit (${window.SecurityUtil.CONFIG.MAX_COMPANIES_COUNT}) reached`); setCustomCompanies(prev => ({ ...prev, [validatedCompany.name]: validatedCompany })); window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); const duration = performance.now() - startTime; window.LoggerUtil.trackPerformance('addCompany', duration, true); window.LoggerUtil.trackAction('company_added', 'company_management', { company: validatedCompany.name }); setShowCompanyModal(false); } catch (error) { window.LoggerUtil.error('Error adding company', { error: error.message }); window.SecurityUtil.handleError(error, 'adding company'); } };
+    const handleUpdateCompany = (companyName, updates) => {
+        if (updates.newCategory) {
+            setCustomCategories(prev => ({ ...prev, [updates.newCategory]: [] }));
+            setDeletedCategories(prev => prev.filter(cat => cat !== updates.newCategory));
+            if (updates.newCategoryColor) {
+                setCategoryColors(prev => ({ ...prev, [updates.newCategory]: updates.newCategoryColor }));
+            }
+            return;
+        }
+        if (updates.deleteCategory) {
+            const categoryToDelete = updates.deleteCategory;
+            const companiesInCategory = allCompanies[categoryToDelete] || [];
+            setDeletedCategories(prev => { if (!prev.includes(categoryToDelete)) { return [...prev, categoryToDelete]; } return prev; });
+            setCustomCategories(prev => {
+                const updated = { ...prev };
+                if (companiesInCategory.length > 0) {
+                    if (!updated['None']) { updated['None'] = []; }
+                    // Companies will be re-distributed by the main loop
+                }
+                delete updated[categoryToDelete];
+                return updated;
+            });
+            if (companiesInCategory.length > 0) {
+                setCustomCompanies(prev => {
+                    const updated = { ...prev };
+                    companiesInCategory.forEach(c => {
+                        const name = c && c.name;
+                        if (!name) return;
+                        const existing = updated[name] || {};
+                        let cats = existing.categories || (existing.category ? [existing.category] : []);
+                        cats = cats.filter(cat => cat !== categoryToDelete);
+                        updated[name] = { ...existing, name, categories: cats.length ? cats : ['None'] };
+                    });
+                    return updated;
+                });
+            }
+            return;
+        }
+        if (updates.renameCategory) {
+            const { oldName, newName } = updates.renameCategory;
+            const companiesInCategory = allCompanies[oldName] || [];
+            setCustomCategories(prev => {
+                const updated = { ...prev };
+                updated[newName] = companiesInCategory;
+                delete updated[oldName];
+                return updated;
+            });
+            setCategoryColors(prev => {
+                const updated = { ...prev };
+                if (updated[oldName]) {
+                    updated[newName] = updated[oldName];
+                    delete updated[oldName];
+                }
+                return updated;
+            });
+            return;
+        }
+        if (updates.updateCategoryColor) {
+            const { category, color } = updates.updateCategoryColor;
+            setCategoryColors(prev => ({ ...prev, [category]: color }));
+            return;
+        }
+        let categoryFound = null;
+        let companyFound = null;
+        Object.entries(allCompanies).forEach(([category, companiesList]) => {
+            const company = companiesList.find(c => c.name === companyName);
+            if (company) { categoryFound = category; companyFound = company; }
+        }); // Note: with multiple categories, this find might just get the first one, but we use companyName to update customCompanies map
+        if (!companyFound && customCompanies[companyName]) {
+            companyFound = customCompanies[companyName];
+            categoryFound = customCompanies[companyName].category || 'None';
+        }
+        if (companyFound) {
+            if (updates.name && updates.name !== companyName) {
+                const newName = updates.name;
+                setCustomCompanies(prev => {
+                    const updated = { ...prev };
+                    updated[newName] = { ...(updated[companyName] || {}), ...updates, name: newName };
+                    delete updated[companyName];
+                    return updated;
+                });
+                const jobsToUpdate = jobs.filter(j => j.company === companyName);
+                if (jobsToUpdate.length > 0) {
+                    const updatedJobs = jobs.map(j => j.company === companyName ? { ...j, company: newName } : j);
+                    setJobs(updatedJobs);
+                }
+            } else {
+                setCustomCompanies(prev => ({
+                    ...prev,
+                    [companyName]: {
+                        ...(prev[companyName] || {}),
+                        ...updates,
+                        name: companyName,
+                        url: updates.url || (companyFound ? companyFound.url : ''),
+                    }
+                }));
+            }
+        }
+    };
+
+    const addJob = (job) => { 
+        try { 
+            const startTime = performance.now(); 
+            window.SecurityUtil.checkRateLimit(); 
+            const validatedJob = window.SecurityUtil.validateJobData(job); 
+            if (jobs.length >= window.SecurityUtil.CONFIG.MAX_JOBS_COUNT) throw new Error(`Maximum jobs limit (${window.SecurityUtil.CONFIG.MAX_JOBS_COUNT}) reached`); 
+            setJobs(prevJobs => [...prevJobs, validatedJob]); 
+            if (job.newCategoryColors) {
+                setCategoryColors(prev => ({ ...prev, ...job.newCategoryColors }));
+            }
+            window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); 
+            const duration = performance.now() - startTime; 
+            window.LoggerUtil.trackPerformance('addJob', duration, true); 
+            window.LoggerUtil.trackAction('job_added', 'job_management', { jobId: validatedJob.id }); 
+            setShowModal(false); setEditingJob(null); 
+        } catch (error) { window.LoggerUtil.error('Error adding job', { error: error.message }); window.SecurityUtil.handleError(error, 'adding job'); } 
+    };
+    const addCompany = (company) => { try { const startTime = performance.now(); window.SecurityUtil.checkRateLimit(); const validatedCompany = window.SecurityUtil.validateCompanyData(company); const currentCount = Object.keys(customCompanies).length; if (currentCount >= window.SecurityUtil.CONFIG.MAX_COMPANIES_COUNT) throw new Error(`Maximum companies limit (${window.SecurityUtil.CONFIG.MAX_COMPANIES_COUNT}) reached`); setCustomCompanies(prev => ({ ...prev, [validatedCompany.name]: validatedCompany })); if (company.newCategoryColors) { setCategoryColors(prev => ({ ...prev, ...company.newCategoryColors })); } if (company.newCategory && company.newCategoryColor) { setCategoryColors(prev => ({ ...prev, [company.newCategory]: company.newCategoryColor })); } window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); const duration = performance.now() - startTime; window.LoggerUtil.trackPerformance('addCompany', duration, true); window.LoggerUtil.trackAction('company_added', 'company_management', { company: validatedCompany.name }); setShowCompanyModal(false); } catch (error) { window.LoggerUtil.error('Error adding company', { error: error.message }); window.SecurityUtil.handleError(error, 'adding company'); } };
     const launchConfetti = () => { const container = document.createElement('div'); container.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9999'; document.body.appendChild(container); const colors = ['#6b8aff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']; const total = 36; for (let i = 0; i < total; i++) { const piece = document.createElement('div'); const width = 6 + Math.random() * 6; const height = width * (1.4 + Math.random() * 0.6); const startLeft = Math.random() * 100; const rotateStart = Math.random() * 360; piece.style.cssText = `position:absolute;top:-16px;left:${startLeft}%;width:${width}px;height:${height}px;background:${colors[i % colors.length]};opacity:1;border-radius:2px;transform:translate3d(0,0,0) rotate(${rotateStart}deg);`; piece.style.mixBlendMode = 'screen'; container.appendChild(piece); const xOffset = (Math.random() - 0.5) * 220; const yOffset = window.innerHeight * 0.98 + Math.random() * 200; const rotateEnd = rotateStart + (Math.random() - 0.5) * 1440; requestAnimationFrame(() => { piece.style.transition = `transform 2.2s ease-out, opacity 2.2s ease-out`; piece.style.transitionDelay = `${Math.random() * 0.16}s`; piece.style.transform = `translate(${xOffset}px, ${yOffset}px) rotate(${rotateEnd}deg)`; piece.style.opacity = '0.4'; }); } setTimeout(() => container.remove(), 2600); };
-    const updateJob = (updatedJob) => { try { const startTime = performance.now(); window.SecurityUtil.checkRateLimit(); const validatedJob = window.SecurityUtil.validateJobData(updatedJob); const oldJob = jobs.find(j => j.id === validatedJob.id); const wasApplied = oldJob?.status === window.JOB_STATUSES.APPLIED; const nowInProgress = validatedJob.status === window.JOB_STATUSES.IN_PROGRESS; const progressionOrder = [window.PROGRESSION_STAGES.APPLICATION, window.PROGRESSION_STAGES.RECRUITER_SCREEN, window.PROGRESSION_STAGES.PARTIAL_LOOP, window.PROGRESSION_STAGES.FULL_LOOP, window.PROGRESSION_STAGES.OFFER]; const oldProgression = oldJob?.progression || window.PROGRESSION_STAGES.APPLICATION; const newProgression = validatedJob.progression || window.PROGRESSION_STAGES.APPLICATION; const progressionMovedForward = progressionOrder.indexOf(newProgression) > progressionOrder.indexOf(oldProgression); setJobs(jobs.map(j => j.id === validatedJob.id ? validatedJob : j)); window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); const duration = performance.now() - startTime; window.LoggerUtil.trackPerformance('updateJob', duration, true); window.LoggerUtil.trackAction('job_updated', 'job_management', { jobId: validatedJob.id }); if ((wasApplied && nowInProgress) || progressionMovedForward) launchConfetti(); setShowModal(false); setEditingJob(null); } catch (error) { window.LoggerUtil.error('Error updating job', { error: error.message }); window.SecurityUtil.handleError(error, 'updating job'); } };
+    const updateJob = (updatedJob) => { 
+        try { 
+            const startTime = performance.now(); 
+            window.SecurityUtil.checkRateLimit(); 
+            const validatedJob = window.SecurityUtil.validateJobData(updatedJob); 
+            const oldJob = jobs.find(j => j.id === validatedJob.id); 
+            const wasApplied = oldJob?.status === window.JOB_STATUSES.APPLIED; 
+            const nowInProgress = validatedJob.status === window.JOB_STATUSES.IN_PROGRESS; 
+            const progressionOrder = [window.PROGRESSION_STAGES.APPLICATION, window.PROGRESSION_STAGES.RECRUITER_SCREEN, window.PROGRESSION_STAGES.PARTIAL_LOOP, window.PROGRESSION_STAGES.FULL_LOOP, window.PROGRESSION_STAGES.OFFER]; 
+            const oldProgression = oldJob?.progression || window.PROGRESSION_STAGES.APPLICATION; 
+            const newProgression = validatedJob.progression || window.PROGRESSION_STAGES.APPLICATION; 
+            const progressionMovedForward = progressionOrder.indexOf(newProgression) > progressionOrder.indexOf(oldProgression); 
+            setJobs(jobs.map(j => j.id === validatedJob.id ? validatedJob : j)); 
+            if (updatedJob.newCategoryColors) {
+                setCategoryColors(prev => ({ ...prev, ...updatedJob.newCategoryColors }));
+            }
+            window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); 
+            const duration = performance.now() - startTime; 
+            window.LoggerUtil.trackPerformance('updateJob', duration, true); 
+            window.LoggerUtil.trackAction('job_updated', 'job_management', { jobId: validatedJob.id }); 
+            if ((wasApplied && nowInProgress) || progressionMovedForward) launchConfetti(); 
+            setShowModal(false); setEditingJob(null); 
+        } catch (error) { window.LoggerUtil.error('Error updating job', { error: error.message }); window.SecurityUtil.handleError(error, 'updating job'); } 
+    };
     const deleteJob = (id) => { if (confirm("Are you sure you want to delete this job?")) { const startTime = performance.now(); setJobs(jobs.filter(j => j.id !== id)); window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); const duration = performance.now() - startTime; window.LoggerUtil.trackPerformance('deleteJob', duration, true); window.LoggerUtil.trackAction('job_deleted', 'job_management', { jobId: id }); } };
     const exportToCSV = () => { const headers = ["Company", "Role", "Status", "Priority", "Date applied", "URL", "Salary", "Location", "Contact name", "Notes"]; const rows = jobs.map(j => [j.company, j.role, j.status, j.priority, new Date(j.dateApplied).toLocaleDateString(), j.url, j.salary || "", j.location || "", j.contact || "", j.notes || ""]); const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n"); const blob = new Blob([csv], { type: "text/csv" }); const url = window.URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `job-search-${new Date().toISOString().split('T')[0]}.csv`; a.click(); };
     const exportBackup = () => { try { const backupData = { jobs: jobs, customCompanies: customCompanies, blockedCompanies: blockedCompanies }; const backup = { version: window.APP_CONFIG.VERSION, exportDate: new Date().toISOString(), checksum: window.SecurityUtil.generateChecksum(backupData), data: backupData }; const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }); const url = window.URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `job-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); window.URL.revokeObjectURL(url); const now = new Date(); setLastBackupTime(now); window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.LAST_BACKUP, now.toISOString()); alert("Backup downloaded successfully!"); } catch (error) { window.SecurityUtil.handleError(error, 'exporting backup'); } };
@@ -290,87 +433,9 @@ function App() {
                     customCompanies={customCompanies}
                     blockedCompanies={blockedCompanies}
                     deletedCategories={deletedCategories}
+                    categoryColors={categoryColors}
                     setDeletedCategories={setDeletedCategories}
-                    onUpdateCompany={(companyName, updates) => {
-                        if (updates.newCategory) {
-                            setCustomCategories(prev => ({ ...prev, [updates.newCategory]: [] }));
-                            setDeletedCategories(prev => prev.filter(cat => cat !== updates.newCategory));
-                            return;
-                        }
-                        if (updates.deleteCategory) {
-                            const categoryToDelete = updates.deleteCategory;
-                            const companiesInCategory = allCompanies[categoryToDelete] || [];
-                            setDeletedCategories(prev => { if (!prev.includes(categoryToDelete)) { return [...prev, categoryToDelete]; } return prev; });
-                            setCustomCategories(prev => {
-                                const updated = { ...prev };
-                                if (companiesInCategory.length > 0) {
-                                    if (!updated['None']) { updated['None'] = []; }
-                                    updated['None'] = [...updated['None'], ...companiesInCategory];
-                                }
-                                delete updated[categoryToDelete];
-                                return updated;
-                            });
-                            if (companiesInCategory.length > 0) {
-                                setCustomCompanies(prev => {
-                                    const updated = { ...prev };
-                                    companiesInCategory.forEach(c => {
-                                        const name = c && c.name;
-                                        if (!name) return;
-                                        updated[name] = { ...(updated[name] || {}), name, category: 'None' };
-                                    });
-                                    return updated;
-                                });
-                            }
-                            return;
-                        }
-                        if (updates.renameCategory) {
-                            const { oldName, newName } = updates.renameCategory;
-                            const companiesInCategory = allCompanies[oldName] || [];
-                            setCustomCategories(prev => {
-                                const updated = { ...prev };
-                                updated[newName] = companiesInCategory;
-                                delete updated[oldName];
-                                return updated;
-                            });
-                            return;
-                        }
-                        let categoryFound = null;
-                        let companyFound = null;
-                        Object.entries(allCompanies).forEach(([category, companiesList]) => {
-                            const company = companiesList.find(c => c.name === companyName);
-                            if (company) { categoryFound = category; companyFound = company; }
-                        });
-                        if (!companyFound && customCompanies[companyName]) {
-                            companyFound = customCompanies[companyName];
-                            categoryFound = customCompanies[companyName].category || 'None';
-                        }
-                        if (companyFound) {
-                            if (updates.name && updates.name !== companyName) {
-                                const newName = updates.name;
-                                setCustomCompanies(prev => {
-                                    const updated = { ...prev };
-                                    updated[newName] = { ...(updated[companyName] || {}), ...updates, name: newName };
-                                    delete updated[companyName];
-                                    return updated;
-                                });
-                                const jobsToUpdate = jobs.filter(j => j.company === companyName);
-                                if (jobsToUpdate.length > 0) {
-                                    const updatedJobs = jobs.map(j => j.company === companyName ? { ...j, company: newName } : j);
-                                    setJobs(updatedJobs);
-                                }
-                            } else {
-                                setCustomCompanies(prev => ({
-                                    ...prev,
-                                    [companyName]: {
-                                        ...(prev[companyName] || {}),
-                                        ...updates,
-                                        name: companyName,
-                                        url: companyFound.url || updates.url,
-                                    }
-                                }));
-                            }
-                        }
-                    }}
+                    onUpdateCompany={handleUpdateCompany}
                     onDeleteCompany={(companyName) => { setBlockedCompanies(prev => [...prev, companyName]); }}
                     onUnhideCompany={(companyName) => { setBlockedCompanies(prev => prev.filter(name => name !== companyName)); }}
                     onAddJob={(company) => { setEditingJob({ company: company.name, url: company.url }); setShowModal(true); }}
@@ -381,6 +446,11 @@ function App() {
                     jobs={filteredJobs}
                     filters={filters}
                     setFilters={setFilters}
+                    categoryColors={categoryColors}
+                    companies={allCompanies}
+                    onUpdateCompany={handleUpdateCompany}
+                    setDeletedCategories={setDeletedCategories}
+                    existingCategories={Object.keys(allCompanies)}
                     onAdd={() => { setEditingJob(null); setShowModal(true); }}
                     onEdit={(job) => { setEditingJob(job); setShowModal(true); }}
                     onUpdateJob={updateJob}
@@ -392,8 +462,17 @@ function App() {
                 />}
                 {view === "stats" && <window.Stats jobs={jobs} />}
             </main>
-            {showModal && (<window.JobModal job={editingJob} onSave={editingJob?.id ? updateJob : addJob} onClose={() => { setShowModal(false); setEditingJob(null); }} />)}
-            {showCompanyModal && (<window.CompanyModal onSave={addCompany} onClose={() => setShowCompanyModal(false)} existingCategories={Object.keys(allCompanies)} />)}
+            {showModal && (
+                <window.JobModal 
+                    job={editingJob} 
+                    onSave={editingJob?.id ? updateJob : addJob} 
+                    onClose={() => { setShowModal(false); setEditingJob(null); }} 
+                    existingCategories={Object.keys(allCompanies)}
+                    categoryColors={categoryColors}
+                    companyCategories={editingJob ? (customCompanies[editingJob.company]?.categories || []) : []}
+                />
+            )}
+            {showCompanyModal && (<window.CompanyModal onSave={addCompany} onClose={() => setShowCompanyModal(false)} existingCategories={Object.keys(allCompanies)} categoryColors={categoryColors} />)}
             {showImportModal && (<window.ImportModal onImport={importBackup} onClose={() => setShowImportModal(false)} />)}
             <footer className="footer">
                 <div className="footer-content">

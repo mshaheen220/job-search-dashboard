@@ -157,6 +157,15 @@ window.SecurityUtil = {
         for (const field of requiredFields) {
             if (!job[field] || typeof job[field] !== 'string') throw new Error(`Invalid job data: ${field} is required`);
         }
+        
+        let categories = [];
+        if (Array.isArray(job.categories)) {
+            categories = job.categories.map(c => this.sanitizeInput(c, 100));
+        } else if (job.category && typeof job.category === 'string') {
+            categories = [this.sanitizeInput(job.category, 100)];
+        }
+        // Note: We don't default to ['None'] here for jobs, as an empty array implies "inherit from company" or "no specific tag"
+
         const validated = {
             id: job.id || Date.now(),
             company: this.sanitizeInput(job.company, 200),
@@ -174,7 +183,8 @@ window.SecurityUtil = {
             closeReason: job.closeReason ? this.validateEnum(job.closeReason, Object.values(window.CLOSE_REASONS), '') : '',
             resumeUrl: job.resumeUrl ? this.validateURL(job.resumeUrl) : '',
             coverLetterUrl: job.coverLetterUrl ? this.validateURL(job.coverLetterUrl) : '',
-            fitLevel: job.fitLevel !== undefined ? this.validateFitLevel(job.fitLevel) : null
+            fitLevel: job.fitLevel !== undefined ? this.validateFitLevel(job.fitLevel) : null,
+            categories: categories
         };
         const dataSize = JSON.stringify(validated).length;
         if (dataSize > 50000) throw new Error('Job data exceeds maximum size');
@@ -183,10 +193,20 @@ window.SecurityUtil = {
     validateCompanyData(company) {
         if (!company || typeof company !== 'object') throw new Error('Invalid company data');
         if (!company.name || typeof company.name !== 'string') throw new Error('Company name is required');
+        
+        let categories = [];
+        if (Array.isArray(company.categories)) {
+            categories = company.categories.map(c => this.sanitizeInput(c, 100));
+        } else if (company.category && typeof company.category === 'string') {
+            categories = [this.sanitizeInput(company.category, 100)];
+        } else {
+            categories = ['None'];
+        }
+
         return {
             name: this.sanitizeInput(company.name, 200),
             url: company.url ? this.validateURL(company.url) : '',
-            category: this.sanitizeInput(company.category || 'None', 100),
+            categories: categories,
             fitLevel: company.fitLevel !== undefined ? this.validateFitLevel(company.fitLevel) : null
         };
     },

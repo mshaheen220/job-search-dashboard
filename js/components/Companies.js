@@ -1,12 +1,11 @@
-window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, deletedCategories, setDeletedCategories, onUpdateCompany, onDeleteCompany, onRemoveCompany, onAddJob, onAddCompany, onViewCompanyJobs, onUnhideCompany }) => {
+window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, deletedCategories, categoryColors, setDeletedCategories, onUpdateCompany, onDeleteCompany, onRemoveCompany, onAddJob, onAddCompany, onViewCompanyJobs, onUnhideCompany }) => {
     const { useState, useEffect } = React;
     const [searchTerm, setSearchTerm] = useState("");
     const [sortConfig, setSortConfig] = useState({ key: 'company', direction: 'asc' });
     const [editingCompany, setEditingCompany] = useState(null);
     const [editUrl, setEditUrl] = useState('');
     const [editCompanyName, setEditCompanyName] = useState('');
-    const [editCategory, setEditCategory] = useState('');
-    const [editNewCategory, setEditNewCategory] = useState('');
+    const [editCategories, setEditCategories] = useState([]);
     const [editFitLevel, setEditFitLevel] = useState(null);
     const [showHidden, setShowHidden] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -16,9 +15,6 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
     const [selectedFitLevels, setSelectedFitLevels] = useState([]);
     const [showFitLevelDropdown, setShowFitLevelDropdown] = useState(false);
     const [showCategoryManager, setShowCategoryManager] = useState(false);
-    const [newCategoryName, setNewCategoryName] = useState('');
-    const [editingCategoryName, setEditingCategoryName] = useState(null);
-    const [editingCategoryNewName, setEditingCategoryNewName] = useState('');
     const [selectedCompanies, setSelectedCompanies] = useState([]);
     const [showBulkActions, setShowBulkActions] = useState(false);
     const [bulkCategory, setBulkCategory] = useState('');
@@ -29,8 +25,10 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
     const filteredCompaniesList = allCompaniesList.filter(company => {
         const matchesSearch = company && company.name && company.name.toLowerCase().includes(searchTerm.toLowerCase());
         if (selectedCategories.length === 0 && appliedFilter === 'all' && selectedFitLevels.length === 0) return matchesSearch;
-        const companyCategory = Object.entries(companies).find(([_, companiesList]) => companiesList.some(c => c.name === company.name))?.[0];
-        if (selectedCategories.length > 0 && !(companyCategory && selectedCategories.includes(companyCategory))) return false;
+        
+        const companyCategories = company.categories || (company.category ? [company.category] : ['None']);
+        
+        if (selectedCategories.length > 0 && !companyCategories.some(c => selectedCategories.includes(c))) return false;
         if (appliedFilter !== 'all') {
             const applicationCount = jobs.filter(j => j.company === company.name).length;
             if (appliedFilter === 'applied' && applicationCount === 0) return false;
@@ -49,9 +47,9 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
         setSortConfig({ key, direction });
     };
     const getSortIcon = (columnKey) => { if (sortConfig.key !== columnKey) return ' ⇅'; return sortConfig.direction === 'asc' ? ' ↑' : ' ↓'; };
-    const handleAddCategory = () => { if (!newCategoryName.trim()) return; if (allCategories.includes(newCategoryName)) { alert('Category already exists'); return; } setDeletedCategories(prev => prev.filter(cat => cat !== newCategoryName)); onUpdateCompany(null, { newCategory: newCategoryName }); setNewCategoryName(''); };
+    const handleAddCategory = (name, color) => { if (!name.trim()) return; if (allCategories.includes(name)) { alert('Category already exists'); return; } setDeletedCategories(prev => prev.filter(cat => cat !== name)); onUpdateCompany(null, { newCategory: name, newCategoryColor: color }); };
     const handleDeleteCategory = (categoryName) => { if (categoryName === 'None') { alert("You can't delete the \"None\" category."); return; } if (!confirm(`Delete category "${categoryName}"? Companies in this category will be moved to "None".`)) return; onUpdateCompany(null, { deleteCategory: categoryName }); };
-    const handleRenameCategory = (oldName, newName) => { if (!newName.trim()) return; if (allCategories.includes(newName) && newName !== oldName) { alert('Category name already exists'); return; } onUpdateCompany(null, { renameCategory: { oldName, newName } }); setEditingCategoryName(null); setEditingCategoryNewName(''); };
+    const handleRenameCategory = (oldName, newName, newColor) => { if (!newName.trim()) return; if (allCategories.includes(newName) && newName !== oldName) { alert('Category name already exists'); return; } if (oldName !== newName) onUpdateCompany(null, { renameCategory: { oldName, newName } }); if (newColor) onUpdateCompany(null, { updateCategoryColor: { category: newName, color: newColor } }); };
     const handleSelectAll = () => { const allCompanyNames = sortedCompaniesList.map(c => c.name); setSelectedCompanies(allCompanyNames); };
     const handleDeselectAll = () => { setSelectedCompanies([]); };
     const handleToggleCompany = (companyName) => { setSelectedCompanies(prev => prev.includes(companyName) ? prev.filter(n => n !== companyName) : [...prev, companyName]); };
@@ -63,14 +61,26 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
         if (sortConfig.key === 'applications') { aVal = jobs.filter(j => j.company === a.name).length; bVal = jobs.filter(j => j.company === b.name).length; }
         else if (sortConfig.key === 'company') { aVal = a.name.toLowerCase(); bVal = b.name.toLowerCase(); }
         else if (sortConfig.key === 'category') {
-            const aCat = Object.entries(companies).find(([_, companiesList]) => companiesList.some(c => c.name === a.name))?.[0] || 'None';
-            const bCat = Object.entries(companies).find(([_, companiesList]) => companiesList.some(c => c.name === b.name))?.[0] || 'None';
-            aVal = aCat.toLowerCase(); bVal = bCat.toLowerCase();
+            const aCats = (a.categories || []).join(', ').toLowerCase();
+            const bCats = (b.categories || []).join(', ').toLowerCase();
+            aVal = aCats; bVal = bCats;
         } else if (sortConfig.key === 'fitLevel') { return window.sortByFitLevel(a.fitLevel || null, b.fitLevel || null, sortConfig.direction); }
         if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
     });
+
+    const toggleEditCategory = (cat) => {
+        setEditCategories(prev => {
+            return prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat];
+        });
+    };
+
+    const handleAddEditCategory = (name, color) => {
+        onUpdateCompany(null, { newCategory: name, newCategoryColor: color });
+        toggleEditCategory(name);
+    };
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (showCategoryDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="category"]')) setShowCategoryDropdown(false);
@@ -152,23 +162,45 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                         <tbody>
                             {sortedCompaniesList.map(company => {
                                 const isHidden = blockedCompanies.includes(company.name);
-                                const companyCategory = Object.entries(companies).find(([_, companiesList]) => companiesList.some(c => c.name === company.name))?.[0] || 'None';
+                                const companyCategories = company.categories || (company.category ? [company.category] : ['None']);
+                                
                                 const getCategoryClassName = (category) => {
                                     const classMap = { 'Developer Tools': 'category-developer-tools', 'Data Infrastructure': 'category-data-infrastructure', 'Cloud/Infrastructure': 'category-cloud-infrastructure', 'Enterprise Software': 'category-enterprise-software', 'Consumer Tech': 'category-consumer-tech', 'None': 'category-none' };
                                     if (classMap[category]) return `category-pill ${classMap[category]}`;
                                     let hash = 0; for (let i = 0; i < category.length; i++) { hash = ((hash << 5) - hash) + category.charCodeAt(i); hash = hash & hash; }
                                     const colorIndex = Math.abs(hash) % 12; return `category-pill category-custom-${colorIndex}`;
                                 };
+                                
+                                const getCategoryStyle = (category) => {
+                                    if (categoryColors && categoryColors[category]) {
+                                        return { backgroundColor: categoryColors[category] + '20', color: categoryColors[category], border: `1px solid ${categoryColors[category]}` };
+                                    }
+                                    return {};
+                                };
+
                                 return (
                                     <tr key={company.name} style={isHidden ? { opacity: 0.6, background: 'var(--bg-tertiary)' } : {}}>
                                         <td><input type="checkbox" checked={selectedCompanies.includes(company.name)} onChange={() => handleToggleCompany(company.name)} style={{ cursor: 'pointer' }} onClick={(e) => e.stopPropagation()} /></td>
                                         <td><a href={company.url} target="_blank" rel="noopener noreferrer" className="link">{company.name}&nbsp;<span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span></a></td>
-                                        <td><span className={getCategoryClassName(companyCategory)} onClick={() => setSelectedCategories([companyCategory])} style={{ cursor: 'pointer', transition: 'opacity 0.2s' }} title={`Filter by ${companyCategory}`}>{companyCategory}</span></td>
+                                        <td>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                {companyCategories.map(cat => (
+                                                    <span key={cat} className={getCategoryClassName(cat)} style={{ ...getCategoryStyle(cat), cursor: 'pointer', transition: 'opacity 0.2s' }} onClick={() => setSelectedCategories([cat])} title={`Filter by ${cat}`}>{cat}</span>
+                                                ))}
+                                            </div>
+                                        </td>
                                         <td><span style={{ fontSize: '0.875rem', fontWeight: company.fitLevel === 3 ? '600' : '400', opacity: company.fitLevel === 1 ? 0.7 : 1 }}>{window.getFitLevelLabel(company.fitLevel || null)}</span></td>
                                         <td>{jobs.filter(j => j.company === company.name).length > 0 ? (<button onClick={() => onViewCompanyJobs(company.name)} style={{ background: 'none', border: 'none', color: "var(--accent-primary)", cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit', padding: 0 }}>{jobs.filter(j => j.company === company.name).length}</button>) : (<span style={{ color: '#6b7280' }}>0</span>)}</td>
                                         <td>
-                                            {isHidden ? (<button className="btn btn-sm" onClick={() => onUnhideCompany(company.name)} style={{ marginRight: '0.5rem' }}>Unhide</button>) : (<><button className="btn btn-sm" onClick={() => onAddJob(company)} style={{ marginRight: '0.5rem' }}>Add application</button><button className="btn btn-sm btn-secondary" onClick={() => { if (confirm(`Hide ${company.name} from this list?`)) { onDeleteCompany(company.name); } }} style={{ marginRight: '0.5rem' }}>Hide</button></>)}
-                                            <button className="btn btn-sm btn-secondary" onClick={() => { setEditingCompany(company); setEditUrl(company.url); setEditCompanyName(company.name); setEditCategory(companyCategory); setEditNewCategory(''); setEditFitLevel(company.fitLevel || null); }}>Edit</button>
+                                            {isHidden ? (
+                                                <button className="icon-btn" onClick={() => onUnhideCompany(company.name)} title="Unhide company" style={{ background: "var(--warning)", border: "1px solid var(--warning)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "white", fontSize: "1.1rem", marginRight: '0.5rem', verticalAlign: 'middle' }}>💡</button>
+                                            ) : (
+                                                <>
+                                                    <button className="icon-btn" onClick={() => onAddJob(company)} title="Add application" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "1.1rem", marginRight: '0.5rem', verticalAlign: 'middle' }}>➕</button>
+                                                    <button className="icon-btn" onClick={() => { if (confirm(`Hide ${company.name} from this list?`)) { onDeleteCompany(company.name); } }} title="Hide company" style={{ background: "#374151", border: "1px solid #374151", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "white", fontSize: "1.1rem", marginRight: '0.5rem', verticalAlign: 'middle', opacity: 0.3 }}>💡</button>
+                                                </>
+                                            )}
+                                            <button className="icon-btn" onClick={() => { setEditingCompany(company); setEditUrl(company.url); setEditCompanyName(company.name); setEditCategories(companyCategories); setEditNewCategory(''); setEditFitLevel(company.fitLevel || null); }} title="Edit company" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem", verticalAlign: 'middle' }}>✏️</button>
                                             <button className="icon-btn danger" onClick={() => onRemoveCompany(company.name)} title="Delete company" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem", marginLeft: '0.5rem', verticalAlign: 'middle' }}>🗑️</button>
                                         </td>
                                     </tr>
@@ -185,46 +217,40 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                         <div className="modal-body">
                             <div className="form-group"><label>Company name</label><input type="text" value={editCompanyName} onChange={(e) => setEditCompanyName(e.target.value)} placeholder="Company name" /></div>
                             <div className="form-group"><label>URL</label><input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} placeholder="https://company.com/careers" /></div>
-                            <div className="form-group"><label>Category</label><select value={editCategory} onChange={(e) => { setEditCategory(e.target.value); setEditNewCategory(""); }}>{allCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}<option value="">Create new category</option></select></div>
-                            {editCategory === "" && (<div className="form-group"><label>New category name</label><input type="text" value={editNewCategory} onChange={(e) => setEditNewCategory(e.target.value)} placeholder="e.g., SaaS Platforms" /></div>)}
+                            
+                            <window.CategorySelector 
+                                allCategories={allCategories}
+                                selectedCategories={editCategories}
+                                categoryColors={categoryColors}
+                                onToggleCategory={toggleEditCategory}
+                                onAddCategory={handleAddEditCategory}
+                                onClear={() => setEditCategories([])}
+                            />
+
                             <div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={editFitLevel} onChange={(val) => setEditFitLevel(val)} /></div>
                         </div>
-                        <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setEditingCompany(null)}>Cancel</button><button className="btn" onClick={() => { onUpdateCompany(editingCompany.name, { name: editCompanyName, url: editUrl, category: editCategory === "" ? editNewCategory : editCategory, fitLevel: editFitLevel }); setEditingCompany(null); }}>Save</button></div>
+                        <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setEditingCompany(null)}>Cancel</button><button className="btn" onClick={() => { 
+                            onUpdateCompany(editingCompany.name, { 
+                                name: editCompanyName, 
+                                url: editUrl, 
+                                categories: editCategories, 
+                                fitLevel: editFitLevel
+                            }); 
+                            setEditingCompany(null); 
+                        }}>Save</button></div>
                     </div>
                 </div>
             )}
             {showCategoryManager && (
-                <div className="modal-overlay" onClick={() => setShowCategoryManager(false)}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header"><h2>Manage categories</h2><button className="modal-close" onClick={() => setShowCategoryManager(false)}>×</button></div>
-                        <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
-                            <div style={{ marginBottom: "2rem", padding: "1rem", background: "var(--bg-elevated)", borderRadius: "10px" }}>
-                                <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Add new category</h3>
-                                <div style={{ display: "flex", gap: "0.5rem" }}><input type="text" placeholder="Category name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()} style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", border: "1px solid var(--border-primary)", borderRadius: "6px", color: "var(--text-primary)", fontSize: "0.9rem" }} autoFocus /><button onClick={handleAddCategory} className="btn" style={{ whiteSpace: "nowrap" }}>Add</button></div>
-                            </div>
-                            <div>
-                                <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Categories ({allCategories.length})</h3>
-                                {allCategories.length === 0 ? (<p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>No categories yet</p>) : (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                        {allCategories.map(category => {
-                                            const companyCount = companies[category]?.length || 0;
-                                            const isEditing = editingCategoryName === category;
-                                            return (
-                                                <div key={category} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", background: "var(--bg-elevated)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-                                                    {isEditing ? (<input type="text" value={editingCategoryNewName} onChange={(e) => setEditingCategoryNewName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleRenameCategory(category, editingCategoryNewName)} style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", border: "1px solid var(--accent-primary)", borderRadius: "4px", color: "var(--text-primary)", marginRight: "0.5rem" }} autoFocus />) : (<div><span style={{ fontWeight: "500", color: "var(--text-primary)" }}>{category}</span><span style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>({companyCount} {companyCount === 1 ? 'company' : 'companies'})</span></div>)}
-                                                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                                                        {isEditing ? (<><button onClick={() => handleRenameCategory(category, editingCategoryNewName)} style={{ padding: "0.4rem 0.8rem", background: "var(--accent-primary)", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Save</button><button onClick={() => setEditingCategoryName(null)} style={{ padding: "0.4rem 0.8rem", background: "var(--bg-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Cancel</button></>) : (<><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { setEditingCategoryName(category); setEditingCategoryNewName(category); } }} disabled={category === 'None'} title={category === 'None' ? "Can't edit default category" : ""} style={{ padding: "0.4rem 0.8rem", background: category === 'None' ? "var(--bg-primary)" : "var(--bg-hover)", color: category === 'None' ? "var(--text-tertiary)" : "var(--text-secondary)", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: category === 'None' ? "not-allowed" : "pointer", fontSize: "0.8rem", opacity: category === 'None' ? 0.5 : 1 }}>Edit</button><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { handleDeleteCategory(category); } }} disabled={category === 'None'} title={category === 'None' ? "Can't delete default category" : ""} style={{ padding: "0.4rem 0.8rem", background: category === 'None' ? "var(--bg-primary)" : "rgba(255, 0, 0, 0.1)", color: category === 'None' ? "var(--text-tertiary)" : "#ff4444", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: category === 'None' ? "not-allowed" : "pointer", fontSize: "0.8rem", opacity: category === 'None' ? 0.5 : 1 }}>Delete</button></>)}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="modal-footer"><button className="btn" onClick={() => setShowCategoryManager(false)}>Close</button></div>
-                    </div>
-                </div>
+                <window.CategoryManagerModal 
+                    onClose={() => setShowCategoryManager(false)}
+                    categories={allCategories}
+                    categoryColors={categoryColors}
+                    categoryCounts={allCategories.reduce((acc, cat) => ({ ...acc, [cat]: companies[cat]?.length || 0 }), {})}
+                    onAddCategory={handleAddCategory}
+                    onRenameCategory={handleRenameCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                />
             )}
         </div>
     );
