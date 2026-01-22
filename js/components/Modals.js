@@ -1,20 +1,35 @@
-window.JobModal = ({ job, onSave, onClose }) => {
+window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, companyCategories }) => {
     const { useState } = React;
+    const [newCategoryColors, setNewCategoryColors] = useState({});
     const [formData, setFormData] = useState(() => {
         const today = new Date().toISOString().split('T')[0];
         const defaults = {
-            company: "", role: "", url: "", status: "Applied", priority: "Tier 2", salary: "", location: "", contact: "", notes: "", followUp: "", dateApplied: today, closeReason: "", progression: "Application", resumeUrl: "", coverLetterUrl: "", fitLevel: null
+            company: "", role: "", url: "", status: "Applied", priority: "Tier 2", salary: "", location: "", contact: "", notes: "", followUp: "", dateApplied: today, closeReason: "", progression: "Application", resumeUrl: "", coverLetterUrl: "", fitLevel: null, categories: []
         };
         if (job) {
-            return { ...defaults, ...job, status: job.status || "Applied", priority: job.priority || "Tier 2", progression: job.progression || "Application", dateApplied: job.dateApplied || today, fitLevel: job.fitLevel || null };
+            // Use job categories if present, otherwise fall back to company categories
+            const cats = (job.categories && job.categories.length > 0) ? job.categories : (companyCategories || []);
+            return { ...defaults, ...job, status: job.status || "Applied", priority: job.priority || "Tier 2", progression: job.progression || "Application", dateApplied: job.dateApplied || today, fitLevel: job.fitLevel || null, categories: cats };
         }
         return defaults;
     });
+    const toggleCategory = (cat) => {
+        setFormData(prev => {
+            const exists = prev.categories.includes(cat);
+            return { ...prev, categories: exists ? prev.categories.filter(c => c !== cat) : [...prev.categories, cat] };
+        });
+    };
+    const handleAddCategory = (name, color) => {
+        toggleCategory(name);
+        if (color) {
+            setNewCategoryColors(prev => ({ ...prev, [name]: color }));
+        }
+    };
     const handleSubmit = (e) => {
         e.preventDefault();
         try {
             if (!formData.company.trim() || !formData.role.trim()) { alert("Company and Role are required"); return; }
-            const jobToSave = { ...formData, status: formData.status || "Applied", priority: formData.priority || "Tier 2", progression: formData.progression || "Application" };
+            const jobToSave = { ...formData, status: formData.status || "Applied", priority: formData.priority || "Tier 2", progression: formData.progression || "Application", categories: formData.categories, newCategoryColors };
             onSave(jobToSave);
         } catch (error) { console.error("Error submitting job:", error); alert("Error saving job: " + error.message); }
     };
@@ -39,6 +54,15 @@ window.JobModal = ({ job, onSave, onClose }) => {
                         <div className="form-row">
                             <div className="form-group"><label>Status *</label><select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>{window.STATUSES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
                             <div className="form-group"><label>Date applied</label><input type="date" value={formData.dateApplied} onChange={(e) => setFormData({ ...formData, dateApplied: e.target.value })} /></div>
+                        </div>
+                        <div className="form-row">
+                            <window.CategorySelector 
+                                allCategories={existingCategories || []}
+                                selectedCategories={formData.categories}
+                                categoryColors={categoryColors}
+                                onToggleCategory={toggleCategory}
+                                onAddCategory={handleAddCategory}
+                            />
                         </div>
                         <div className="form-row">
                             {(formData.status === "In Progress" || formData.status === "Closed") && (
@@ -69,9 +93,72 @@ window.JobModal = ({ job, onSave, onClose }) => {
     );
 };
 
+window.CategoryManagerModal = ({ onClose, categories, categoryColors, categoryCounts, onAddCategory, onRenameCategory, onDeleteCategory }) => {
+    const { useState } = React;
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryColor, setNewCategoryColor] = useState('#3b82f6');
+    const [editingCategoryName, setEditingCategoryName] = useState(null);
+    const [editingCategoryNewName, setEditingCategoryNewName] = useState('');
+    const [editingCategoryColor, setEditingCategoryColor] = useState('#3b82f6');
+
+    const handleAdd = () => {
+        onAddCategory(newCategoryName, newCategoryColor);
+        setNewCategoryName('');
+        setNewCategoryColor('#3b82f6');
+    };
+
+    const handleRename = (oldName) => {
+        onRenameCategory(oldName, editingCategoryNewName, editingCategoryColor);
+        setEditingCategoryName(null);
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header"><h2>Manage categories</h2><button className="modal-close" onClick={onClose}>×</button></div>
+                <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
+                    <div style={{ marginBottom: "2rem", padding: "1rem", background: "var(--bg-elevated)", borderRadius: "10px" }}>
+                        <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Add new category</h3>
+                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <input type="text" placeholder="Category name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAdd()} style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", border: "1px solid var(--border-primary)", borderRadius: "6px", color: "var(--text-primary)", fontSize: "0.9rem" }} autoFocus />
+                            <input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} style={{ width: '36px', height: '36px', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} title="Choose category color" />
+                            <button onClick={handleAdd} className="btn" style={{ whiteSpace: "nowrap" }}>Add</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Categories ({categories.length})</h3>
+                        {categories.length === 0 ? (<p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>No categories yet</p>) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                {categories.map(category => {
+                                    const companyCount = categoryCounts[category] || 0;
+                                    const isEditing = editingCategoryName === category;
+                                    const currentColor = category === 'None' ? '#9ca3af' : (categoryColors[category] || '#3b82f6');
+                                    return (
+                                        <div key={category} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", background: "var(--bg-elevated)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                                            {isEditing ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', flex: 1, marginRight: '0.5rem' }}><input type="text" value={editingCategoryNewName} onChange={(e) => setEditingCategoryNewName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleRename(category)} style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", border: "1px solid var(--accent-primary)", borderRadius: "4px", color: "var(--text-primary)", marginRight: "0.5rem" }} autoFocus /><input type="color" value={editingCategoryColor} onChange={(e) => setEditingCategoryColor(e.target.value)} style={{ width: '32px', height: '32px', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} /></div>
+                                            ) : (
+                                                <div style={{ display: 'flex', alignItems: 'center' }}><div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: currentColor, marginRight: '0.5rem' }}></div><div><span style={{ fontWeight: "500", color: "var(--text-primary)" }}>{category}</span><span style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>({companyCount} {companyCount === 1 ? 'company' : 'companies'})</span></div></div>
+                                            )}
+                                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                                                {isEditing ? (<><button onClick={() => handleRename(category)} style={{ padding: "0.4rem 0.8rem", background: "var(--accent-primary)", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Save</button><button onClick={() => setEditingCategoryName(null)} style={{ padding: "0.4rem 0.8rem", background: "var(--bg-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Cancel</button></>) : (<><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { setEditingCategoryName(category); setEditingCategoryNewName(category); setEditingCategoryColor(categoryColors[category] || '#3b82f6'); } }} disabled={category === 'None'} title={category === 'None' ? "Can't edit default category" : ""} style={{ padding: "0.4rem 0.8rem", background: category === 'None' ? "var(--bg-primary)" : "var(--bg-hover)", color: category === 'None' ? "var(--text-tertiary)" : "var(--text-secondary)", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: category === 'None' ? "not-allowed" : "pointer", fontSize: "0.8rem", opacity: category === 'None' ? 0.5 : 1 }}>Edit</button><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { onDeleteCategory(category); } }} disabled={category === 'None'} title={category === 'None' ? "Can't delete default category" : ""} style={{ padding: "0.4rem 0.8rem", background: category === 'None' ? "var(--bg-primary)" : "rgba(255, 0, 0, 0.1)", color: category === 'None' ? "var(--text-tertiary)" : "#ff4444", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: category === 'None' ? "not-allowed" : "pointer", fontSize: "0.8rem", opacity: category === 'None' ? 0.5 : 1 }}>Delete</button></>)}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="modal-footer"><button className="btn" onClick={onClose}>Close</button></div>
+            </div>
+        </div>
+    );
+};
+
 window.CompanyModal = ({ onSave, onClose, existingCategories, categoryColors }) => {
     const { useState } = React;
-    const [formData, setFormData] = useState({ name: "", url: "", categories: [], newCategory: "", newCategoryColor: "#3b82f6", fitLevel: null });
+    const [formData, setFormData] = useState({ name: "", url: "", categories: [], fitLevel: null });
     const [newCategoryColors, setNewCategoryColors] = useState({});
     
     const toggleCategory = (cat) => {
@@ -115,39 +202,13 @@ window.CompanyModal = ({ onSave, onClose, existingCategories, categoryColors }) 
                     <div className="modal-body">
                         <div className="form-group"><label>Company name *</label><input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Acme Corp" /></div>
                         <div className="form-group"><label>Careers page URL *</label><input type="url" required value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} placeholder="https://company.com/careers/jobs" /></div>
-                        
-                        <div className="form-group">
-                            <label>Categories *</label>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                {existingCategories.map(cat => {
-                                    const isSelected = formData.categories.includes(cat);
-                                    const color = categoryColors && categoryColors[cat] ? categoryColors[cat] : 'var(--accent-primary)';
-                                    return (
-                                        <button 
-                                            type="button" 
-                                            key={cat} 
-                                            onClick={() => toggleCategory(cat)}
-                                            style={{
-                                                padding: '0.25rem 0.75rem',
-                                                borderRadius: '12px',
-                                                border: isSelected ? `2px solid ${color}` : '1px solid var(--border-primary)',
-                                                background: isSelected ? (categoryColors && categoryColors[cat] ? color + '20' : 'var(--bg-secondary)') : 'var(--bg-tertiary)',
-                                                color: isSelected ? color : 'var(--text-secondary)',
-                                                cursor: 'pointer',
-                                                fontSize: '0.85rem'
-                                            }}
-                                        >
-                                            {cat}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                <input type="text" value={formData.newCategory} onChange={(e) => setFormData({ ...formData, newCategory: e.target.value })} placeholder="Or create new category..." style={{ flex: 1 }} />
-                                {formData.newCategory && <input type="color" value={formData.newCategoryColor} onChange={(e) => setFormData({ ...formData, newCategoryColor: e.target.value })} style={{ width: '40px', height: '40px', padding: 0, border: 'none', background: 'none' }} title="Choose category color" />}
-                                <button type="button" onClick={handleAddNewCategory} className="btn btn-sm" disabled={!formData.newCategory.trim()}>Add</button>
-                            </div>
-                        </div>
+                        <window.CategorySelector 
+                            allCategories={existingCategories}
+                            selectedCategories={formData.categories}
+                            categoryColors={categoryColors}
+                            onToggleCategory={toggleCategory}
+                            onAddCategory={handleAddCategory}
+                        />
 
                         <div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={formData.fitLevel} onChange={(val) => setFormData({ ...formData, fitLevel: val })} /></div>
                     </div>

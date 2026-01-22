@@ -6,8 +6,6 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
     const [editUrl, setEditUrl] = useState('');
     const [editCompanyName, setEditCompanyName] = useState('');
     const [editCategories, setEditCategories] = useState([]);
-    const [editNewCategory, setEditNewCategory] = useState('');
-    const [editNewCategoryColor, setEditNewCategoryColor] = useState('#3b82f6');
     const [editFitLevel, setEditFitLevel] = useState(null);
     const [showHidden, setShowHidden] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -17,11 +15,6 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
     const [selectedFitLevels, setSelectedFitLevels] = useState([]);
     const [showFitLevelDropdown, setShowFitLevelDropdown] = useState(false);
     const [showCategoryManager, setShowCategoryManager] = useState(false);
-    const [newCategoryName, setNewCategoryName] = useState('');
-    const [newCategoryColor, setNewCategoryColor] = useState('#3b82f6');
-    const [editingCategoryName, setEditingCategoryName] = useState(null);
-    const [editingCategoryNewName, setEditingCategoryNewName] = useState('');
-    const [editingCategoryColor, setEditingCategoryColor] = useState('#3b82f6');
     const [selectedCompanies, setSelectedCompanies] = useState([]);
     const [showBulkActions, setShowBulkActions] = useState(false);
     const [bulkCategory, setBulkCategory] = useState('');
@@ -54,22 +47,9 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
         setSortConfig({ key, direction });
     };
     const getSortIcon = (columnKey) => { if (sortConfig.key !== columnKey) return ' ⇅'; return sortConfig.direction === 'asc' ? ' ↑' : ' ↓'; };
-    const handleAddCategory = () => { 
-        if (!newCategoryName.trim()) return; 
-        if (allCategories.includes(newCategoryName)) { alert('Category already exists'); return; } 
-        setDeletedCategories(prev => prev.filter(cat => cat !== newCategoryName)); 
-        onUpdateCompany(null, { newCategory: newCategoryName, newCategoryColor: newCategoryColor }); 
-        setNewCategoryName(''); 
-        setNewCategoryColor('#3b82f6');
-    };
+    const handleAddCategory = (name, color) => { if (!name.trim()) return; if (allCategories.includes(name)) { alert('Category already exists'); return; } setDeletedCategories(prev => prev.filter(cat => cat !== name)); onUpdateCompany(null, { newCategory: name, newCategoryColor: color }); };
     const handleDeleteCategory = (categoryName) => { if (categoryName === 'None') { alert("You can't delete the \"None\" category."); return; } if (!confirm(`Delete category "${categoryName}"? Companies in this category will be moved to "None".`)) return; onUpdateCompany(null, { deleteCategory: categoryName }); };
-    const handleRenameCategory = (oldName, newName, newColor) => { 
-        if (!newName.trim()) return; 
-        if (allCategories.includes(newName) && newName !== oldName) { alert('Category name already exists'); return; } 
-        if (oldName !== newName) onUpdateCompany(null, { renameCategory: { oldName, newName } }); 
-        if (newColor) onUpdateCompany(null, { updateCategoryColor: { category: newName, color: newColor } });
-        setEditingCategoryName(null); setEditingCategoryNewName(''); 
-    };
+    const handleRenameCategory = (oldName, newName, newColor) => { if (!newName.trim()) return; if (allCategories.includes(newName) && newName !== oldName) { alert('Category name already exists'); return; } if (oldName !== newName) onUpdateCompany(null, { renameCategory: { oldName, newName } }); if (newColor) onUpdateCompany(null, { updateCategoryColor: { category: newName, color: newColor } }); };
     const handleSelectAll = () => { const allCompanyNames = sortedCompaniesList.map(c => c.name); setSelectedCompanies(allCompanyNames); };
     const handleDeselectAll = () => { setSelectedCompanies([]); };
     const handleToggleCompany = (companyName) => { setSelectedCompanies(prev => prev.includes(companyName) ? prev.filter(n => n !== companyName) : [...prev, companyName]); };
@@ -96,13 +76,9 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
         });
     };
 
-    const handleAddEditCategory = () => {
-        if (!editNewCategory.trim()) return;
-        const cat = editNewCategory.trim();
-        onUpdateCompany(null, { newCategory: cat, newCategoryColor: editNewCategoryColor });
-        toggleEditCategory(cat);
-        setEditNewCategory('');
-        setEditNewCategoryColor('#3b82f6');
+    const handleAddEditCategory = (name, color) => {
+        onUpdateCompany(null, { newCategory: name, newCategoryColor: color });
+        toggleEditCategory(name);
     };
 
     useEffect(() => {
@@ -235,54 +211,23 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                             <div className="form-group"><label>Company name</label><input type="text" value={editCompanyName} onChange={(e) => setEditCompanyName(e.target.value)} placeholder="Company name" /></div>
                             <div className="form-group"><label>URL</label><input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} placeholder="https://company.com/careers" /></div>
                             
-                            <div className="form-group">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                    <label style={{ marginBottom: 0 }}>Categories</label>
-                                    <button type="button" onClick={() => setEditCategories([])} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                    {allCategories.map(cat => {
-                                        const isSelected = editCategories.includes(cat);
-                                        const color = categoryColors && categoryColors[cat] ? categoryColors[cat] : 'var(--accent-primary)';
-                                        return (
-                                            <button 
-                                                type="button" 
-                                                key={cat} 
-                                                onClick={() => toggleEditCategory(cat)}
-                                                style={{
-                                                    padding: '0.25rem 0.75rem',
-                                                    borderRadius: '12px',
-                                                    border: isSelected ? `2px solid ${color}` : '1px solid var(--border-primary)',
-                                                    background: isSelected ? (categoryColors && categoryColors[cat] ? color + '20' : 'var(--bg-secondary)') : 'var(--bg-tertiary)',
-                                                    color: isSelected ? color : 'var(--text-secondary)',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.85rem'
-                                                }}
-                                            >
-                                                {cat}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                    <input type="text" value={editNewCategory} onChange={(e) => setEditNewCategory(e.target.value)} placeholder="Or create new category..." style={{ flex: 1 }} />
-                                    {editNewCategory && <input type="color" value={editNewCategoryColor} onChange={(e) => setEditNewCategoryColor(e.target.value)} style={{ width: '40px', height: '40px', padding: 0, border: 'none', background: 'none' }} title="Choose category color" />}
-                                    <button type="button" onClick={handleAddEditCategory} className="btn btn-sm" disabled={!editNewCategory.trim()}>Add</button>
-                                </div>
-                            </div>
+                            <window.CategorySelector 
+                                allCategories={allCategories}
+                                selectedCategories={editCategories}
+                                categoryColors={categoryColors}
+                                onToggleCategory={toggleEditCategory}
+                                onAddCategory={handleAddEditCategory}
+                                onClear={() => setEditCategories([])}
+                            />
 
                             <div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={editFitLevel} onChange={(val) => setEditFitLevel(val)} /></div>
                         </div>
                         <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setEditingCompany(null)}>Cancel</button><button className="btn" onClick={() => { 
-                            const categories = [...editCategories];
-                            if (editNewCategory.trim()) categories.push(editNewCategory.trim());
                             onUpdateCompany(editingCompany.name, { 
                                 name: editCompanyName, 
                                 url: editUrl, 
-                                categories: categories, 
-                                fitLevel: editFitLevel,
-                                newCategory: editNewCategory.trim(),
-                                newCategoryColor: editNewCategoryColor
+                                categories: editCategories, 
+                                fitLevel: editFitLevel
                             }); 
                             setEditingCompany(null); 
                         }}>Save</button></div>
@@ -290,46 +235,15 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                 </div>
             )}
             {showCategoryManager && (
-                <div className="modal-overlay" onClick={() => setShowCategoryManager(false)}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header"><h2>Manage categories</h2><button className="modal-close" onClick={() => setShowCategoryManager(false)}>×</button></div>
-                        <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
-                            <div style={{ marginBottom: "2rem", padding: "1rem", background: "var(--bg-elevated)", borderRadius: "10px" }}>
-                                <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Add new category</h3>
-                                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                                    <input type="text" placeholder="Category name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()} style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", border: "1px solid var(--border-primary)", borderRadius: "6px", color: "var(--text-primary)", fontSize: "0.9rem" }} autoFocus />
-                                    <input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} style={{ width: '36px', height: '36px', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} title="Choose category color" />
-                                    <button onClick={handleAddCategory} className="btn" style={{ whiteSpace: "nowrap" }}>Add</button>
-                                </div>
-                            </div>
-                            <div>
-                                <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Categories ({allCategories.length})</h3>
-                                {allCategories.length === 0 ? (<p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>No categories yet</p>) : (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                        {allCategories.map(category => {
-                                            const companyCount = companies[category]?.length || 0;
-                                            const isEditing = editingCategoryName === category;
-                                            const currentColor = categoryColors[category] || '#3b82f6';
-                                            return (
-                                                <div key={category} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", background: "var(--bg-elevated)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-                                                    {isEditing ? (
-                                                        <div style={{ display: 'flex', alignItems: 'center', flex: 1, marginRight: '0.5rem' }}><input type="text" value={editingCategoryNewName} onChange={(e) => setEditingCategoryNewName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleRenameCategory(category, editingCategoryNewName, editingCategoryColor)} style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", border: "1px solid var(--accent-primary)", borderRadius: "4px", color: "var(--text-primary)", marginRight: "0.5rem" }} autoFocus /><input type="color" value={editingCategoryColor} onChange={(e) => setEditingCategoryColor(e.target.value)} style={{ width: '32px', height: '32px', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} /></div>
-                                                    ) : (
-                                                        <div style={{ display: 'flex', alignItems: 'center' }}><div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: currentColor, marginRight: '0.5rem' }}></div><div><span style={{ fontWeight: "500", color: "var(--text-primary)" }}>{category}</span><span style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>({companyCount} {companyCount === 1 ? 'company' : 'companies'})</span></div></div>
-                                                    )}
-                                                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                                                        {isEditing ? (<><button onClick={() => handleRenameCategory(category, editingCategoryNewName, editingCategoryColor)} style={{ padding: "0.4rem 0.8rem", background: "var(--accent-primary)", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Save</button><button onClick={() => setEditingCategoryName(null)} style={{ padding: "0.4rem 0.8rem", background: "var(--bg-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Cancel</button></>) : (<><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { setEditingCategoryName(category); setEditingCategoryNewName(category); setEditingCategoryColor(categoryColors[category] || '#3b82f6'); } }} disabled={category === 'None'} title={category === 'None' ? "Can't edit default category" : ""} style={{ padding: "0.4rem 0.8rem", background: category === 'None' ? "var(--bg-primary)" : "var(--bg-hover)", color: category === 'None' ? "var(--text-tertiary)" : "var(--text-secondary)", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: category === 'None' ? "not-allowed" : "pointer", fontSize: "0.8rem", opacity: category === 'None' ? 0.5 : 1 }}>Edit</button><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { handleDeleteCategory(category); } }} disabled={category === 'None'} title={category === 'None' ? "Can't delete default category" : ""} style={{ padding: "0.4rem 0.8rem", background: category === 'None' ? "var(--bg-primary)" : "rgba(255, 0, 0, 0.1)", color: category === 'None' ? "var(--text-tertiary)" : "#ff4444", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: category === 'None' ? "not-allowed" : "pointer", fontSize: "0.8rem", opacity: category === 'None' ? 0.5 : 1 }}>Delete</button></>)}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="modal-footer"><button className="btn" onClick={() => setShowCategoryManager(false)}>Close</button></div>
-                    </div>
-                </div>
+                <window.CategoryManagerModal 
+                    onClose={() => setShowCategoryManager(false)}
+                    categories={allCategories}
+                    categoryColors={categoryColors}
+                    categoryCounts={allCategories.reduce((acc, cat) => ({ ...acc, [cat]: companies[cat]?.length || 0 }), {})}
+                    onAddCategory={handleAddCategory}
+                    onRenameCategory={handleRenameCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                />
             )}
         </div>
     );

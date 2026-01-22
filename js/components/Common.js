@@ -288,3 +288,61 @@ window.FitLevelSelect = ({ value, onChange }) => {
         </select>
     );
 };
+
+window.CategorySelector = ({ 
+    allCategories, 
+    selectedCategories, 
+    categoryColors, 
+    onToggleCategory, 
+    onAddCategory,
+    onClear
+}) => {
+    const { useState } = React;
+    const [newCategory, setNewCategory] = useState('');
+    const [newCategoryColor, setNewCategoryColor] = useState('#3b82f6');
+
+    const handleAdd = () => {
+        if (!newCategory.trim()) return;
+        onAddCategory(newCategory.trim(), newCategoryColor);
+        setNewCategory('');
+        setNewCategoryColor('#3b82f6');
+    };
+
+    return (
+        <div className="form-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ marginBottom: 0 }}>Categories</label>
+                {onClear && <button type="button" onClick={onClear} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                {allCategories.map(cat => {
+                    const isSelected = selectedCategories.includes(cat);
+                    const color = categoryColors && categoryColors[cat] ? categoryColors[cat] : 'var(--accent-primary)';
+                    return (
+                        <button 
+                            type="button" 
+                            key={cat} 
+                            onClick={() => onToggleCategory(cat)}
+                            style={{
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: '12px',
+                                border: isSelected ? `2px solid ${color}` : '1px solid var(--border-primary)',
+                                background: isSelected ? (categoryColors && categoryColors[cat] ? color + '20' : 'var(--bg-secondary)') : 'var(--bg-tertiary)',
+                                color: isSelected ? color : 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            {cat}
+                        </button>
+                    );
+                })}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Or create new category..." style={{ flex: 1 }} />
+                {newCategory && <input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} style={{ width: '40px', height: '40px', padding: 0, border: 'none', background: 'none' }} title="Choose category color" />}
+                <button type="button" onClick={handleAdd} className="btn btn-sm" disabled={!newCategory.trim()}>Add</button>
+            </div>
+        </div>
+    );
+};

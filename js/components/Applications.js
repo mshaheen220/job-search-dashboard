@@ -1,4 +1,4 @@
-window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onDelete, onExport, onBackup, requestSort, getSortIcon }) => {
+window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategories, companies, onUpdateCompany, setDeletedCategories, onAdd, onEdit, onUpdateJob, onDelete, onExport, onBackup, requestSort, getSortIcon }) => {
     const { useState, useRef, useEffect } = React;
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [viewModalJob, setViewModalJob] = useState(null);
@@ -8,7 +8,7 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
     const autoExpandTextarea = () => { if (notesTextareaRef.current) { notesTextareaRef.current.style.height = 'auto'; notesTextareaRef.current.style.height = Math.max(notesTextareaRef.current.scrollHeight, 120) + 'px'; } };
     useEffect(() => { autoExpandTextarea(); }, [viewModalJob, editedJobData, viewModalEdit]);
     const viewFieldStyle = viewModalEdit ? {} : { background: 'var(--bg-tertiary)', border: '1px dashed var(--border-primary)', color: 'var(--text-secondary)', cursor: 'not-allowed' };
-    const [visibleColumns, setVisibleColumns] = useState({ company: true, role: true, status: true, priority: false, dateApplied: true, salary: false, closeReason: false, progression: true, followUp: false, notes: false, resumeUrl: false, coverLetterUrl: false, fitLevel: true });
+    const [visibleColumns, setVisibleColumns] = useState({ company: true, role: true, status: true, priority: false, dateApplied: true, salary: false, closeReason: false, progression: true, followUp: false, notes: false, resumeUrl: false, coverLetterUrl: false, fitLevel: true, categories: true });
     const [showColumnSelector, setShowColumnSelector] = useState(false);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [dateRangeFilter, setDateRangeFilter] = useState({ start: '', end: '' });
@@ -16,6 +16,7 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
     const [selectedPriorities, setSelectedPriorities] = useState([]);
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+    const [showCategoryManager, setShowCategoryManager] = useState(false);
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (showStatusDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="status"]')) setShowStatusDropdown(false);
@@ -78,8 +79,35 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
 
         return <span className={className} title={title} />;
     };
+
+    const getCategoryClassName = (category) => {
+        const classMap = { 'Developer Tools': 'category-developer-tools', 'Data Infrastructure': 'category-data-infrastructure', 'Cloud/Infrastructure': 'category-cloud-infrastructure', 'Enterprise Software': 'category-enterprise-software', 'Consumer Tech': 'category-consumer-tech', 'None': 'category-none' };
+        if (classMap[category]) return `category-pill ${classMap[category]}`;
+        let hash = 0; for (let i = 0; i < category.length; i++) { hash = ((hash << 5) - hash) + category.charCodeAt(i); hash = hash & hash; }
+        const colorIndex = Math.abs(hash) % 12; return `category-pill category-custom-${colorIndex}`;
+    };
+    
+    const getCategoryStyle = (category) => {
+        if (categoryColors && categoryColors[category]) {
+            return { backgroundColor: categoryColors[category] + '20', color: categoryColors[category], border: `1px solid ${categoryColors[category]}` };
+        }
+        return {};
+    };
+    const handleAddCategory = (name, color) => { 
+        if (!name.trim()) return; 
+        if (existingCategories.includes(name)) { alert('Category already exists'); return; } 
+        setDeletedCategories(prev => prev.filter(cat => cat !== name)); 
+        onUpdateCompany(null, { newCategory: name, newCategoryColor: color }); 
+    };
+    const handleDeleteCategory = (categoryName) => { if (categoryName === 'None') { alert("You can't delete the \"None\" category."); return; } if (!confirm(`Delete category "${categoryName}"? Companies in this category will be moved to "None".`)) return; onUpdateCompany(null, { deleteCategory: categoryName }); };
+    const handleRenameCategory = (oldName, newName, newColor) => { 
+        if (!newName.trim()) return; 
+        if (existingCategories.includes(newName) && newName !== oldName) { alert('Category name already exists'); return; } 
+        if (oldName !== newName) onUpdateCompany(null, { renameCategory: { oldName, newName } }); 
+        if (newColor) onUpdateCompany(null, { updateCategoryColor: { category: newName, color: newColor } });
+    };
     const columns = [
-        { key: 'company', label: 'Company' }, { key: 'role', label: 'Role' }, { key: 'status', label: 'Status' }, { key: 'priority', label: 'Priority' }, { key: 'dateApplied', label: 'Date applied' }, { key: 'salary', label: 'Salary' }, { key: 'closeReason', label: 'Reason' }, { key: 'progression', label: 'Progress' }, { key: 'followUp', label: 'Close date' }, { key: 'notes', label: 'Notes' }, { key: 'resumeUrl', label: 'Resume' }, { key: 'coverLetterUrl', label: 'Cover letter' }, { key: 'fitLevel', label: 'Fit Level' }
+        { key: 'company', label: 'Company' }, { key: 'role', label: 'Role' }, { key: 'status', label: 'Status' }, { key: 'priority', label: 'Priority' }, { key: 'dateApplied', label: 'Date applied' }, { key: 'salary', label: 'Salary' }, { key: 'closeReason', label: 'Reason' }, { key: 'progression', label: 'Progress' }, { key: 'followUp', label: 'Close date' }, { key: 'notes', label: 'Notes' }, { key: 'resumeUrl', label: 'Resume' }, { key: 'coverLetterUrl', label: 'Cover letter' }, { key: 'fitLevel', label: 'Fit Level' }, { key: 'categories', label: 'Categories' }
     ];
     return (
         <div>
@@ -142,6 +170,7 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
                                     {visibleColumns.company && (<th onClick={() => requestSort('company')} style={{ cursor: 'pointer' }}>Company{getSortIcon('company')}</th>)}
                                     {visibleColumns.role && (<th onClick={() => requestSort('role')} style={{ cursor: 'pointer' }}>Role{getSortIcon('role')}</th>)}
                                     {visibleColumns.status && (<th onClick={() => requestSort('status')} style={{ cursor: 'pointer' }}>Status{getSortIcon('status')}</th>)}
+                                    {visibleColumns.categories && (<th><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Categories<button onClick={(e) => { e.stopPropagation(); setShowCategoryManager(true); }} title="Manage categories" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1rem', padding: '0', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}>⚙️</button></div></th>)}
                                     {visibleColumns.priority && (<th onClick={() => requestSort('priority')} style={{ cursor: 'pointer' }}>Priority{getSortIcon('priority')}</th>)}
                                     {visibleColumns.fitLevel && (<th onClick={() => requestSort('fitLevel')} style={{ cursor: 'pointer' }}>Fit Level{getSortIcon('fitLevel')}</th>)}
                                     {visibleColumns.dateApplied && (<th onClick={() => requestSort('dateApplied')} style={{ cursor: 'pointer' }}>Date applied{getSortIcon('dateApplied')}</th>)}
@@ -161,6 +190,13 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
                                         {visibleColumns.company && <td><strong>{job.company}</strong></td>}
                                         {visibleColumns.role && (<td style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}><button className="icon-btn" title="View" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "1.1rem" }} onClick={() => { setViewModalJob(job); setViewModalOpen(true); setViewModalEdit(false); }}><span role="img" aria-label="View">👁️</span></button>{job.url ? (<a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)", textDecoration: "none" }}>{job.role}&nbsp;<span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span></a>) : job.role}</td>)}
                                         {visibleColumns.status && <td><window.StatusBadge status={job.status} /></td>}
+                                        {visibleColumns.categories && (
+                                            <td>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                    {(job.categories || []).map(cat => (<span key={cat} className={getCategoryClassName(cat)} style={getCategoryStyle(cat)}>{cat}</span>))}
+                                                </div>
+                                            </td>
+                                        )}
                                         {visibleColumns.priority && <td><window.PriorityBadge priority={job.priority} /></td>}
                                         {visibleColumns.fitLevel && <td>{window.getFitLevelLabel(job.fitLevel)}</td>}
                                         {visibleColumns.dateApplied && <td>{job.dateApplied ? <div style={{ display: 'flex', alignItems: 'center' }}>{getAgeIcon(job.dateApplied, job.status)} {new Date(job.dateApplied + 'T00:00:00').toLocaleDateString()}</div> : '-'}</td>}
@@ -243,6 +279,17 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
                         </div>
                     </div>
                 </div>
+            )}
+            {showCategoryManager && (
+                <window.CategoryManagerModal 
+                    onClose={() => setShowCategoryManager(false)}
+                    categories={existingCategories}
+                    categoryColors={categoryColors}
+                    categoryCounts={existingCategories.reduce((acc, cat) => ({ ...acc, [cat]: companies[cat]?.length || 0 }), {})}
+                    onAddCategory={handleAddCategory}
+                    onRenameCategory={handleRenameCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                />
             )}
         </div>
     );
