@@ -235,6 +235,20 @@ function App() {
             const validatedJob = window.SecurityUtil.validateJobData(job); 
             if (jobs.length >= window.SecurityUtil.CONFIG.MAX_JOBS_COUNT) throw new Error(`Maximum jobs limit (${window.SecurityUtil.CONFIG.MAX_JOBS_COUNT}) reached`); 
             setJobs(prevJobs => [...prevJobs, validatedJob]); 
+            
+            if (validatedJob.categories && validatedJob.categories.length > 0) {
+                const missingCategories = validatedJob.categories.filter(cat => !allCompanies[cat]);
+                if (missingCategories.length > 0) {
+                    setCustomCategories(prev => {
+                        const updated = { ...prev };
+                        missingCategories.forEach(cat => {
+                            if (!updated[cat]) updated[cat] = [];
+                        });
+                        return updated;
+                    });
+                }
+            }
+
             if (job.newCategoryColors) {
                 setCategoryColors(prev => ({ ...prev, ...job.newCategoryColors }));
             }
@@ -245,7 +259,42 @@ function App() {
             setShowModal(false); setEditingJob(null); 
         } catch (error) { window.LoggerUtil.error('Error adding job', { error: error.message }); window.SecurityUtil.handleError(error, 'adding job'); } 
     };
-    const addCompany = (company) => { try { const startTime = performance.now(); window.SecurityUtil.checkRateLimit(); const validatedCompany = window.SecurityUtil.validateCompanyData(company); const currentCount = Object.keys(customCompanies).length; if (currentCount >= window.SecurityUtil.CONFIG.MAX_COMPANIES_COUNT) throw new Error(`Maximum companies limit (${window.SecurityUtil.CONFIG.MAX_COMPANIES_COUNT}) reached`); setCustomCompanies(prev => ({ ...prev, [validatedCompany.name]: validatedCompany })); if (company.newCategoryColors) { setCategoryColors(prev => ({ ...prev, ...company.newCategoryColors })); } if (company.newCategory && company.newCategoryColor) { setCategoryColors(prev => ({ ...prev, [company.newCategory]: company.newCategoryColor })); } window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); const duration = performance.now() - startTime; window.LoggerUtil.trackPerformance('addCompany', duration, true); window.LoggerUtil.trackAction('company_added', 'company_management', { company: validatedCompany.name }); setShowCompanyModal(false); } catch (error) { window.LoggerUtil.error('Error adding company', { error: error.message }); window.SecurityUtil.handleError(error, 'adding company'); } };
+    const addCompany = (company) => { 
+        try { 
+            const startTime = performance.now(); 
+            window.SecurityUtil.checkRateLimit(); 
+            const validatedCompany = window.SecurityUtil.validateCompanyData(company); 
+            const currentCount = Object.keys(customCompanies).length; 
+            if (currentCount >= window.SecurityUtil.CONFIG.MAX_COMPANIES_COUNT) throw new Error(`Maximum companies limit (${window.SecurityUtil.CONFIG.MAX_COMPANIES_COUNT}) reached`); 
+            
+            setCustomCompanies(prev => ({ ...prev, [validatedCompany.name]: validatedCompany })); 
+            
+            if (validatedCompany.categories && validatedCompany.categories.length > 0) {
+                const missingCategories = validatedCompany.categories.filter(cat => !allCompanies[cat]);
+                if (missingCategories.length > 0) {
+                    setCustomCategories(prev => {
+                        const updated = { ...prev };
+                        missingCategories.forEach(cat => {
+                            if (!updated[cat]) updated[cat] = [];
+                        });
+                        return updated;
+                    });
+                }
+            }
+
+            if (company.newCategoryColors) { setCategoryColors(prev => ({ ...prev, ...company.newCategoryColors })); } 
+            if (company.newCategory && company.newCategoryColor) { setCategoryColors(prev => ({ ...prev, [company.newCategory]: company.newCategoryColor })); } 
+            
+            window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); 
+            const duration = performance.now() - startTime; 
+            window.LoggerUtil.trackPerformance('addCompany', duration, true); 
+            window.LoggerUtil.trackAction('company_added', 'company_management', { company: validatedCompany.name }); 
+            setShowCompanyModal(false); 
+        } catch (error) { 
+            window.LoggerUtil.error('Error adding company', { error: error.message }); 
+            window.SecurityUtil.handleError(error, 'adding company'); 
+        } 
+    };
     const launchConfetti = () => { const container = document.createElement('div'); container.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9999'; document.body.appendChild(container); const colors = ['#6b8aff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']; const total = 36; for (let i = 0; i < total; i++) { const piece = document.createElement('div'); const width = 6 + Math.random() * 6; const height = width * (1.4 + Math.random() * 0.6); const startLeft = Math.random() * 100; const rotateStart = Math.random() * 360; piece.style.cssText = `position:absolute;top:-16px;left:${startLeft}%;width:${width}px;height:${height}px;background:${colors[i % colors.length]};opacity:1;border-radius:2px;transform:translate3d(0,0,0) rotate(${rotateStart}deg);`; piece.style.mixBlendMode = 'screen'; container.appendChild(piece); const xOffset = (Math.random() - 0.5) * 220; const yOffset = window.innerHeight * 0.98 + Math.random() * 200; const rotateEnd = rotateStart + (Math.random() - 0.5) * 1440; requestAnimationFrame(() => { piece.style.transition = `transform 2.2s ease-out, opacity 2.2s ease-out`; piece.style.transitionDelay = `${Math.random() * 0.16}s`; piece.style.transform = `translate(${xOffset}px, ${yOffset}px) rotate(${rotateEnd}deg)`; piece.style.opacity = '0.4'; }); } setTimeout(() => container.remove(), 2600); };
     const updateJob = (updatedJob) => { 
         try { 
@@ -260,6 +309,20 @@ function App() {
             const newProgression = validatedJob.progression || window.PROGRESSION_STAGES.APPLICATION; 
             const progressionMovedForward = progressionOrder.indexOf(newProgression) > progressionOrder.indexOf(oldProgression); 
             setJobs(jobs.map(j => j.id === validatedJob.id ? validatedJob : j)); 
+            
+            if (validatedJob.categories && validatedJob.categories.length > 0) {
+                const missingCategories = validatedJob.categories.filter(cat => !allCompanies[cat]);
+                if (missingCategories.length > 0) {
+                    setCustomCategories(prev => {
+                        const updated = { ...prev };
+                        missingCategories.forEach(cat => {
+                            if (!updated[cat]) updated[cat] = [];
+                        });
+                        return updated;
+                    });
+                }
+            }
+
             if (updatedJob.newCategoryColors) {
                 setCategoryColors(prev => ({ ...prev, ...updatedJob.newCategoryColors }));
             }
