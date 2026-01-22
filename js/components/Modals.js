@@ -1,5 +1,5 @@
 window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, companyCategories }) => {
-    const { useState } = React;
+    const { useState, useMemo } = React;
     const [newCategoryColors, setNewCategoryColors] = useState({});
     const [formData, setFormData] = useState(() => {
         const today = new Date().toISOString().split('T')[0];
@@ -33,6 +33,17 @@ window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, c
             onSave(jobToSave);
         } catch (error) { console.error("Error submitting job:", error); alert("Error saving job: " + error.message); }
     };
+
+    const displayCategories = useMemo(() => {
+        const cats = new Set(existingCategories || []);
+        if (formData.categories) {
+            formData.categories.forEach(c => cats.add(c));
+        }
+        return Array.from(cats).sort();
+    }, [existingCategories, formData.categories]);
+
+    const displayColors = useMemo(() => ({ ...categoryColors, ...newCategoryColors }), [categoryColors, newCategoryColors]);
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -57,9 +68,9 @@ window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, c
                         </div>
                         <div className="form-row">
                             <window.CategorySelector 
-                                allCategories={existingCategories || []}
+                                allCategories={displayCategories}
                                 selectedCategories={formData.categories}
-                                categoryColors={categoryColors}
+                                categoryColors={displayColors}
                                 onToggleCategory={toggleCategory}
                                 onAddCategory={handleAddCategory}
                             />
@@ -168,28 +179,21 @@ window.CompanyModal = ({ onSave, onClose, existingCategories, categoryColors }) 
         });
     };
 
-    const handleAddNewCategory = () => {
-        if (!formData.newCategory.trim()) return;
-        const cat = formData.newCategory.trim();
-        toggleCategory(cat);
-        setNewCategoryColors(prev => ({ ...prev, [cat]: formData.newCategoryColor }));
-        setFormData(prev => ({ ...prev, newCategory: "", newCategoryColor: "#3b82f6" }));
+    const handleAddCategory = (name, color) => {
+        toggleCategory(name);
+        setNewCategoryColors(prev => ({ ...prev, [name]: color }));
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
         try {
-            if ((formData.categories.length === 0 && !formData.newCategory.trim()) || !formData.name.trim() || !formData.url.trim()) { alert("Please fill in all required fields"); return; }
-            const categories = [...formData.categories];
-            if (formData.newCategory.trim()) categories.push(formData.newCategory.trim());
+            if (formData.categories.length === 0 || !formData.name.trim() || !formData.url.trim()) { alert("Please fill in all required fields"); return; }
             
             onSave({ 
                 name: formData.name.trim(), 
                 url: formData.url.trim(), 
-                categories: categories, 
+                categories: formData.categories, 
                 fitLevel: formData.fitLevel,
-                newCategory: formData.newCategory.trim(),
-                newCategoryColor: formData.newCategoryColor,
                 newCategoryColors: newCategoryColors
             });
         } catch (error) { console.error("Error submitting company:", error); alert("Error saving company. Please try again."); }
