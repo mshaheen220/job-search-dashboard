@@ -65,10 +65,10 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
             className += ' new';
             title = "New application (< 36 hours)";
         } else if (status !== 'Closed') {
-            if (diffDays > 14) {
+            if (diffDays >= 14) {
                 className += ' stale';
                 title = "Stale (> 2 weeks)";
-            } else if (diffDays > 7) {
+            } else if (diffDays >= 7) {
                 className += ' warning';
                 title = "Warning (> 1 week)";
             }
