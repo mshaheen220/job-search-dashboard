@@ -185,7 +185,7 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                                         <td>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
                                                 {companyCategories.map(cat => (
-                                                    <span key={cat} className={getCategoryClassName(cat)} style={{ ...getCategoryStyle(cat), cursor: 'pointer', transition: 'opacity 0.2s' }} onClick={() => setSelectedCategories([cat])} title={`Filter by ${cat}`}>{cat}</span>
+                                                    <span key={cat} className={getCategoryClassName(cat)} style={getCategoryStyle(cat)}>{cat}</span>
                                                 ))}
                                             </div>
                                         </td>

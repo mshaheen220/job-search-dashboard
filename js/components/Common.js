@@ -323,14 +323,11 @@ window.CategorySelector = ({
                             type="button" 
                             key={cat} 
                             onClick={() => onToggleCategory(cat)}
+                            className="category-selector-btn"
                             style={{
-                                padding: '0.25rem 0.75rem',
-                                borderRadius: '12px',
-                                border: isSelected ? `2px solid ${color}` : '1px solid var(--border-primary)',
-                                background: isSelected ? (categoryColors && categoryColors[cat] ? color + '20' : 'var(--bg-secondary)') : 'var(--bg-tertiary)',
-                                color: isSelected ? color : 'var(--text-secondary)',
-                                cursor: 'pointer',
-                                fontSize: '0.85rem'
+                                border: isSelected ? `2px solid ${color}` : undefined,
+                                background: isSelected ? (categoryColors && categoryColors[cat] ? color + '20' : 'var(--bg-secondary)') : undefined,
+                                color: isSelected ? color : undefined
                             }}
                         >
                             {cat}
