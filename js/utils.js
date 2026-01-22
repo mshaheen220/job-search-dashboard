@@ -78,23 +78,6 @@ window.StorageUtil = {
         } catch (error) {
             window.SecurityUtil.handleError(error, 'removing data', false);
         }
-    },
-    getUsageStats() {
-        try {
-            let total = 0;
-            for (let key in localStorage) {
-                if (localStorage.hasOwnProperty(key)) {
-                    total += localStorage[key].length + key.length;
-                }
-            }
-            return {
-                used: total,
-                usedMB: (total / (1024 * 1024)).toFixed(2),
-                estimated: '5-10MB typical limit'
-            };
-        } catch (error) {
-            return { error: 'Unable to calculate usage' };
-        }
     }
 };
 
@@ -397,11 +380,6 @@ window.PerformanceUtil = {
         if (this.metrics.operationTimes[operation].length > 100) this.metrics.operationTimes[operation].shift();
         return result;
     },
-    getAvgTime(operation) {
-        const times = this.metrics.operationTimes[operation];
-        if (!times || times.length === 0) return 0;
-        return times.reduce((a, b) => a + b, 0) / times.length;
-    },
     getReport() {
         const report = {
             cacheStats: {
@@ -468,15 +446,6 @@ window.LoggerUtil = {
     info(message, data) { this.log(this.LOG_LEVELS.INFO, message, data); },
     warn(message, data) { this.log(this.LOG_LEVELS.WARN, message, data); },
     error(message, data) { this.log(this.LOG_LEVELS.ERROR, message, data); },
-    getLogs(level = null, hoursBack = 24) {
-        const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-        let filtered = this.logs.filter(log => new Date(log.timestamp) >= cutoffTime);
-        if (level) filtered = filtered.filter(log => log.level === level);
-        return filtered;
-    },
-    exportLogs() {
-        return { exported: new Date().toISOString(), totalLogs: this.logs.length, logs: this.logs };
-    },
     trackAction(action, category, data = {}) {
         this.info(`User Action: ${action}`, { category, ...data });
     },

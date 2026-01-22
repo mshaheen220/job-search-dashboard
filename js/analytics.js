@@ -374,10 +374,7 @@ const cachedAnalytics = (() => {
                 return window.PerformanceUtil.measure('analytics:complete', () => original.getCompleteAnalytics(jobs));
             }, 30000);
         },
-        getHotPeriods: original.getHotPeriods,
-        getApplicationsPerDay: original.getApplicationsPerDay,
         getApplicationsPerMonth: original.getApplicationsPerMonth,
-        getPriorityStats: original.getPriorityStats,
         getMostResponsiveCompanies: original.getMostResponsiveCompanies,
         getProgressionBreakdownForResponded: original.getProgressionBreakdownForResponded
     };
