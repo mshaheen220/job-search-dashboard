@@ -7,6 +7,7 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
     const [editCompanyName, setEditCompanyName] = useState('');
     const [editCategory, setEditCategory] = useState('');
     const [editNewCategory, setEditNewCategory] = useState('');
+    const [editFitLevel, setEditFitLevel] = useState(null);
     const [showHidden, setShowHidden] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -48,7 +49,6 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
         setSortConfig({ key, direction });
     };
     const getSortIcon = (columnKey) => { if (sortConfig.key !== columnKey) return ' ⇅'; return sortConfig.direction === 'asc' ? ' ↑' : ' ↓'; };
-    const handleFitLevelChange = (companyName, newValue) => { onUpdateCompany(companyName, { fitLevel: newValue }); };
     const handleAddCategory = () => { if (!newCategoryName.trim()) return; if (allCategories.includes(newCategoryName)) { alert('Category already exists'); return; } setDeletedCategories(prev => prev.filter(cat => cat !== newCategoryName)); onUpdateCompany(null, { newCategory: newCategoryName }); setNewCategoryName(''); };
     const handleDeleteCategory = (categoryName) => { if (categoryName === 'None') { alert("You can't delete the \"None\" category."); return; } if (!confirm(`Delete category "${categoryName}"? Companies in this category will be moved to "None".`)) return; onUpdateCompany(null, { deleteCategory: categoryName }); };
     const handleRenameCategory = (oldName, newName) => { if (!newName.trim()) return; if (allCategories.includes(newName) && newName !== oldName) { alert('Category name already exists'); return; } onUpdateCompany(null, { renameCategory: { oldName, newName } }); setEditingCategoryName(null); setEditingCategoryNewName(''); };
@@ -164,11 +164,11 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                                         <td><input type="checkbox" checked={selectedCompanies.includes(company.name)} onChange={() => handleToggleCompany(company.name)} style={{ cursor: 'pointer' }} onClick={(e) => e.stopPropagation()} /></td>
                                         <td><a href={company.url} target="_blank" rel="noopener noreferrer" className="link">{company.name}&nbsp;<span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span></a></td>
                                         <td><span className={getCategoryClassName(companyCategory)} onClick={() => setSelectedCategories([companyCategory])} style={{ cursor: 'pointer', transition: 'opacity 0.2s' }} title={`Filter by ${companyCategory}`}>{companyCategory}</span></td>
-                                        <td><select value={window.getFitLevelLabel(company.fitLevel || null)} onChange={(e) => handleFitLevelChange(company.name, window.getFitLevelValue(e.target.value))} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', padding: '0.375rem 0.5rem', borderRadius: '6px', fontSize: '0.875rem', cursor: 'pointer', fontWeight: company.fitLevel === 3 ? '600' : company.fitLevel === 1 ? '400' : '500', opacity: company.fitLevel === 1 ? 0.7 : 1 }}><option value="—">—</option><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option></select></td>
+                                        <td><span style={{ fontSize: '0.875rem', fontWeight: company.fitLevel === 3 ? '600' : '400', opacity: company.fitLevel === 1 ? 0.7 : 1 }}>{window.getFitLevelLabel(company.fitLevel || null)}</span></td>
                                         <td>{jobs.filter(j => j.company === company.name).length > 0 ? (<button onClick={() => onViewCompanyJobs(company.name)} style={{ background: 'none', border: 'none', color: "var(--accent-primary)", cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit', padding: 0 }}>{jobs.filter(j => j.company === company.name).length}</button>) : (<span style={{ color: '#6b7280' }}>0</span>)}</td>
                                         <td>
                                             {isHidden ? (<button className="btn btn-sm" onClick={() => onUnhideCompany(company.name)} style={{ marginRight: '0.5rem' }}>Unhide</button>) : (<><button className="btn btn-sm" onClick={() => onAddJob(company)} style={{ marginRight: '0.5rem' }}>Add application</button><button className="btn btn-sm btn-secondary" onClick={() => { if (confirm(`Hide ${company.name} from this list?`)) { onDeleteCompany(company.name); } }} style={{ marginRight: '0.5rem' }}>Hide</button></>)}
-                                            <button className="btn btn-sm btn-secondary" onClick={() => { setEditingCompany(company); setEditUrl(company.url); setEditCompanyName(company.name); setEditCategory(companyCategory); setEditNewCategory(''); }}>Edit</button>
+                                            <button className="btn btn-sm btn-secondary" onClick={() => { setEditingCompany(company); setEditUrl(company.url); setEditCompanyName(company.name); setEditCategory(companyCategory); setEditNewCategory(''); setEditFitLevel(company.fitLevel || null); }}>Edit</button>
                                         </td>
                                     </tr>
                                 );
@@ -186,8 +186,9 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                             <div className="form-group"><label>URL</label><input type="url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} placeholder="https://company.com/careers" /></div>
                             <div className="form-group"><label>Category</label><select value={editCategory} onChange={(e) => { setEditCategory(e.target.value); setEditNewCategory(""); }}>{allCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}<option value="">Create new category</option></select></div>
                             {editCategory === "" && (<div className="form-group"><label>New category name</label><input type="text" value={editNewCategory} onChange={(e) => setEditNewCategory(e.target.value)} placeholder="e.g., SaaS Platforms" /></div>)}
+                            <div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={editFitLevel} onChange={(val) => setEditFitLevel(val)} /></div>
                         </div>
-                        <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setEditingCompany(null)}>Cancel</button><button className="btn" onClick={() => { onUpdateCompany(editingCompany.name, { name: editCompanyName, url: editUrl, category: editCategory === "" ? editNewCategory : editCategory }); setEditingCompany(null); }}>Save</button></div>
+                        <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setEditingCompany(null)}>Cancel</button><button className="btn" onClick={() => { onUpdateCompany(editingCompany.name, { name: editCompanyName, url: editUrl, category: editCategory === "" ? editNewCategory : editCategory, fitLevel: editFitLevel }); setEditingCompany(null); }}>Save</button></div>
                     </div>
                 </div>
             )}

@@ -264,3 +264,27 @@ class ErrorBoundary extends React.Component {
     }
 }
 window.ErrorBoundary = ErrorBoundary;
+
+window.FitLevelSelect = ({ value, onChange }) => {
+    return (
+        <select
+            value={window.getFitLevelLabel(value)}
+            onChange={(e) => onChange(window.getFitLevelValue(e.target.value))}
+            style={{
+                width: '100%',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-primary)',
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: '0.9rem',
+                transition: 'all 0.2s ease'
+            }}
+        >
+            {Object.values(window.FIT_LEVELS).map(level => (
+                <option key={level.label} value={level.label}>{level.label}</option>
+            ))}
+        </select>
+    );
+};

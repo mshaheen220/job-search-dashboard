@@ -3,10 +3,10 @@ window.JobModal = ({ job, onSave, onClose }) => {
     const [formData, setFormData] = useState(() => {
         const today = new Date().toISOString().split('T')[0];
         const defaults = {
-            company: "", role: "", url: "", status: "Applied", priority: "Tier 2", salary: "", location: "", contact: "", notes: "", followUp: "", dateApplied: today, closeReason: "", progression: "Application", resumeUrl: "", coverLetterUrl: ""
+            company: "", role: "", url: "", status: "Applied", priority: "Tier 2", salary: "", location: "", contact: "", notes: "", followUp: "", dateApplied: today, closeReason: "", progression: "Application", resumeUrl: "", coverLetterUrl: "", fitLevel: null
         };
         if (job) {
-            return { ...defaults, ...job, status: job.status || "Applied", priority: job.priority || "Tier 2", progression: job.progression || "Application", dateApplied: job.dateApplied || today };
+            return { ...defaults, ...job, status: job.status || "Applied", priority: job.priority || "Tier 2", progression: job.progression || "Application", dateApplied: job.dateApplied || today, fitLevel: job.fitLevel || null };
         }
         return defaults;
     });
@@ -42,9 +42,12 @@ window.JobModal = ({ job, onSave, onClose }) => {
                         </div>
                         <div className="form-row">
                             {(formData.status === "In Progress" || formData.status === "Closed") && (
-                                <div className="form-group"><label>Progression {formData.status === "Closed" && "(final stage)"}</label><select value={formData.progression || ""} onChange={(e) => setFormData({ ...formData, progression: e.target.value })} disabled={formData.status === "Closed"} style={formData.status === "Closed" ? { backgroundColor: '#2a3248', cursor: 'not-allowed' } : {}}><option value="">Select progression...</option>{window.PROGRESSIONS.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                                <div className="form-group"><label>Progression {formData.status === "Closed" && "(final stage)"}</label><select value={formData.progression || ""} onChange={(e) => setFormData({ ...formData, progression: e.target.value })}><option value="">Select progression...</option>{window.PROGRESSIONS.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
                             )}
                             <div className="form-group"><label>Priority</label><select value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })}>{window.PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={formData.fitLevel} onChange={(val) => setFormData({ ...formData, fitLevel: val })} /></div>
                         </div>
                         {formData.status === "Closed" && (
                             <div className="form-row">
@@ -68,13 +71,13 @@ window.JobModal = ({ job, onSave, onClose }) => {
 
 window.CompanyModal = ({ onSave, onClose, existingCategories }) => {
     const { useState } = React;
-    const [formData, setFormData] = useState({ name: "", url: "", category: existingCategories[0] || "", newCategory: "" });
+    const [formData, setFormData] = useState({ name: "", url: "", category: existingCategories[0] || "", newCategory: "", fitLevel: null });
     const handleSubmit = (e) => {
         e.preventDefault();
         try {
             const category = formData.newCategory.trim() || formData.category;
             if (!category || !formData.name.trim() || !formData.url.trim()) { alert("Please fill in all required fields"); return; }
-            onSave({ name: formData.name.trim(), url: formData.url.trim(), category: category.trim() });
+            onSave({ name: formData.name.trim(), url: formData.url.trim(), category: category.trim(), fitLevel: formData.fitLevel });
         } catch (error) { console.error("Error submitting company:", error); alert("Error saving company. Please try again."); }
     };
     return (
@@ -87,6 +90,7 @@ window.CompanyModal = ({ onSave, onClose, existingCategories }) => {
                         <div className="form-group"><label>Careers page URL *</label><input type="url" required value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} placeholder="https://company.com/careers/jobs" /></div>
                         <div className="form-group"><label>Category *</label><select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value, newCategory: "" })} required={!formData.newCategory}>{existingCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}<option value="">Create new category</option></select></div>
                         {formData.category === "" && (<div className="form-group"><label>New category name *</label><input type="text" required={formData.category === ""} value={formData.newCategory} onChange={(e) => setFormData({ ...formData, newCategory: e.target.value })} placeholder="e.g., SaaS Platforms" /></div>)}
+                        <div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={formData.fitLevel} onChange={(val) => setFormData({ ...formData, fitLevel: val })} /></div>
                     </div>
                     <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button><button type="submit" className="btn">Add company</button></div>
                 </form>

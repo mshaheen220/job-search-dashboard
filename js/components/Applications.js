@@ -8,7 +8,7 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
     const autoExpandTextarea = () => { if (notesTextareaRef.current) { notesTextareaRef.current.style.height = 'auto'; notesTextareaRef.current.style.height = Math.max(notesTextareaRef.current.scrollHeight, 120) + 'px'; } };
     useEffect(() => { autoExpandTextarea(); }, [viewModalJob, editedJobData, viewModalEdit]);
     const viewFieldStyle = viewModalEdit ? {} : { background: 'var(--bg-tertiary)', border: '1px dashed var(--border-primary)', color: 'var(--text-secondary)', cursor: 'not-allowed' };
-    const [visibleColumns, setVisibleColumns] = useState({ company: true, role: true, status: true, priority: false, dateApplied: true, salary: false, closeReason: false, progression: true, followUp: false, notes: false, resumeUrl: false, coverLetterUrl: false });
+    const [visibleColumns, setVisibleColumns] = useState({ company: true, role: true, status: true, priority: false, dateApplied: true, salary: false, closeReason: false, progression: true, followUp: false, notes: false, resumeUrl: false, coverLetterUrl: false, fitLevel: true });
     const [showColumnSelector, setShowColumnSelector] = useState(false);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [dateRangeFilter, setDateRangeFilter] = useState({ start: '', end: '' });
@@ -51,7 +51,7 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
     const toggleStatus = (status) => { setSelectedStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]); };
     const togglePriority = (priority) => { setSelectedPriorities(prev => prev.includes(priority) ? prev.filter(p => p !== priority) : [...prev, priority]); };
     const columns = [
-        { key: 'company', label: 'Company' }, { key: 'role', label: 'Role' }, { key: 'status', label: 'Status' }, { key: 'priority', label: 'Priority' }, { key: 'dateApplied', label: 'Date applied' }, { key: 'salary', label: 'Salary' }, { key: 'closeReason', label: 'Reason' }, { key: 'progression', label: 'Progress' }, { key: 'followUp', label: 'Close date' }, { key: 'notes', label: 'Notes' }, { key: 'resumeUrl', label: 'Resume' }, { key: 'coverLetterUrl', label: 'Cover letter' }
+        { key: 'company', label: 'Company' }, { key: 'role', label: 'Role' }, { key: 'status', label: 'Status' }, { key: 'priority', label: 'Priority' }, { key: 'dateApplied', label: 'Date applied' }, { key: 'salary', label: 'Salary' }, { key: 'closeReason', label: 'Reason' }, { key: 'progression', label: 'Progress' }, { key: 'followUp', label: 'Close date' }, { key: 'notes', label: 'Notes' }, { key: 'resumeUrl', label: 'Resume' }, { key: 'coverLetterUrl', label: 'Cover letter' }, { key: 'fitLevel', label: 'Fit Level' }
     ];
     return (
         <div>
@@ -115,6 +115,7 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
                                     {visibleColumns.role && (<th onClick={() => requestSort('role')} style={{ cursor: 'pointer' }}>Role{getSortIcon('role')}</th>)}
                                     {visibleColumns.status && (<th onClick={() => requestSort('status')} style={{ cursor: 'pointer' }}>Status{getSortIcon('status')}</th>)}
                                     {visibleColumns.priority && (<th onClick={() => requestSort('priority')} style={{ cursor: 'pointer' }}>Priority{getSortIcon('priority')}</th>)}
+                                    {visibleColumns.fitLevel && (<th onClick={() => requestSort('fitLevel')} style={{ cursor: 'pointer' }}>Fit Level{getSortIcon('fitLevel')}</th>)}
                                     {visibleColumns.dateApplied && (<th onClick={() => requestSort('dateApplied')} style={{ cursor: 'pointer' }}>Date applied{getSortIcon('dateApplied')}</th>)}
                                     {visibleColumns.salary && (<th onClick={() => requestSort('salary')} style={{ cursor: 'pointer' }}>Salary{getSortIcon('salary')}</th>)}
                                     {visibleColumns.closeReason && (<th onClick={() => requestSort('closeReason')} style={{ cursor: 'pointer' }}>Reason{getSortIcon('closeReason')}</th>)}
@@ -133,6 +134,7 @@ window.JobsTable = ({ jobs, filters, setFilters, onAdd, onEdit, onUpdateJob, onD
                                         {visibleColumns.role && (<td style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}><button className="icon-btn" title="View" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "1.1rem" }} onClick={() => { setViewModalJob(job); setViewModalOpen(true); setViewModalEdit(false); }}><span role="img" aria-label="View">👁️</span></button>{job.url ? (<a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)", textDecoration: "none" }}>{job.role}&nbsp;<span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span></a>) : job.role}</td>)}
                                         {visibleColumns.status && <td><window.StatusBadge status={job.status} /></td>}
                                         {visibleColumns.priority && <td><window.PriorityBadge priority={job.priority} /></td>}
+                                        {visibleColumns.fitLevel && <td>{window.getFitLevelLabel(job.fitLevel)}</td>}
                                         {visibleColumns.dateApplied && <td>{job.dateApplied ? new Date(job.dateApplied + 'T00:00:00').toLocaleDateString() : '-'}</td>}
                                         {visibleColumns.salary && <td>{job.salary || "-"}</td>}
                                         {visibleColumns.closeReason && <td>{job.closeReason || "-"}</td>}

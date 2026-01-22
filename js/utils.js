@@ -190,7 +190,8 @@ window.SecurityUtil = {
             progression: this.validateEnum(job.progression, Object.values(window.PROGRESSION_STAGES), window.PROGRESSION_STAGES.APPLICATION),
             closeReason: job.closeReason ? this.validateEnum(job.closeReason, Object.values(window.CLOSE_REASONS), '') : '',
             resumeUrl: job.resumeUrl ? this.validateURL(job.resumeUrl) : '',
-            coverLetterUrl: job.coverLetterUrl ? this.validateURL(job.coverLetterUrl) : ''
+            coverLetterUrl: job.coverLetterUrl ? this.validateURL(job.coverLetterUrl) : '',
+            fitLevel: job.fitLevel !== undefined ? this.validateFitLevel(job.fitLevel) : null
         };
         const dataSize = JSON.stringify(validated).length;
         if (dataSize > 50000) throw new Error('Job data exceeds maximum size');
