@@ -13,13 +13,32 @@ const Select = ({ label, children, ...p }) => <div className="form-group"><label
 const InterviewManager = ({ interviews, onChange }) => {
     const { useState } = React;
     const [isAdding, setIsAdding] = useState(false);
-    const [newInterview, setNewInterview] = useState({ type: 'Recruiter Screen', date: '', duration: 30, interviewers: [], notes: '' });
+    const [editingId, setEditingId] = useState(null);
+    const [newInterview, setNewInterview] = useState({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, date: '', duration: 30, interviewers: [], notes: '' });
     const [tempInterviewer, setTempInterviewer] = useState({ name: '', title: '', email: '', linkedin: '' });
 
-    const handleAdd = () => {
-        onChange([...interviews, { ...newInterview, id: Date.now().toString(36) + Math.random().toString(36).substr(2) }]);
+    const handleSave = () => {
+        if (editingId) {
+            onChange(interviews.map(i => i.id === editingId ? { ...newInterview, id: editingId } : i));
+        } else {
+            onChange([...interviews, { ...newInterview, id: Date.now().toString(36) + Math.random().toString(36).substr(2) }]);
+        }
         setIsAdding(false);
-        setNewInterview({ type: 'Recruiter Screen', date: '', duration: 30, interviewers: [], notes: '' });
+        setEditingId(null);
+        setNewInterview({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, date: '', duration: 30, interviewers: [], notes: '' });
+        setTempInterviewer({ name: '', title: '', email: '', linkedin: '' });
+    };
+
+    const handleEdit = (interview) => {
+        setNewInterview({ ...interview });
+        setEditingId(interview.id);
+        setIsAdding(true);
+    };
+
+    const handleCancel = () => {
+        setIsAdding(false);
+        setEditingId(null);
+        setNewInterview({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, date: '', duration: 30, interviewers: [], notes: '' });
         setTempInterviewer({ name: '', title: '', email: '', linkedin: '' });
     };
 
@@ -46,7 +65,7 @@ const InterviewManager = ({ interviews, onChange }) => {
                         <div key={interview.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
                             <div>
                                 <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>{interview.type}</div>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{interview.date ? new Date(interview.date).toLocaleString() : 'No date'} · {interview.duration}m</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{interview.date ? new Date(interview.date).toLocaleString() : 'No date'} · {interview.format || 'Video Call'} · {interview.duration}m</div>
                                 {interview.interviewers && interview.interviewers.length > 0 && (
                                     <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
                                         {interview.interviewers.map((iv, i) => (
@@ -58,7 +77,10 @@ const InterviewManager = ({ interviews, onChange }) => {
                                     </div>
                                 )}
                             </div>
-                            <button type="button" onClick={() => handleDelete(interview.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}>×</button>
+                            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                <button type="button" onClick={() => handleEdit(interview)} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }} title="Edit round">✏️</button>
+                                <button type="button" onClick={() => handleDelete(interview.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }} title="Delete round">×</button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -66,8 +88,11 @@ const InterviewManager = ({ interviews, onChange }) => {
 
             {isAdding && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px dashed var(--accent-primary)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}><select value={newInterview.type} onChange={e => setNewInterview({...newInterview, type: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}><option>Recruiter Screen</option><option>Technical Screen</option><option>Hiring Manager</option><option>System Design</option><option>Coding Round</option><option>Behavioral</option><option>Final Round</option></select><input type="datetime-local" value={newInterview.date} onChange={e => setNewInterview({...newInterview, date: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} /></div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.5rem' }}><input type="number" placeholder="Mins" value={newInterview.duration} onChange={e => setNewInterview({...newInterview, duration: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                        <select value={newInterview.type} onChange={e => setNewInterview({...newInterview, type: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}><option>Recruiter Screen</option><option>Technical Screen</option><option>Hiring Manager</option><option>System Design</option><option>Coding Round</option><option>Behavioral</option><option>Final Round</option></select>
+                        <select value={newInterview.format} onChange={e => setNewInterview({...newInterview, format: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>{Object.values(window.INTERVIEW_FORMATS).map(f => <option key={f} value={f}>{f}</option>)}</select>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}><input type="datetime-local" value={newInterview.date} onChange={e => setNewInterview({...newInterview, date: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} /><input type="number" placeholder="Duration (mins)" value={newInterview.duration} onChange={e => setNewInterview({...newInterview, duration: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} /></div>
                     
                     <div style={{ background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-primary)' }}>
                         <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem' }}>Interviewers</div>
@@ -87,7 +112,7 @@ const InterviewManager = ({ interviews, onChange }) => {
                     </div>
 
                     <textarea placeholder="Notes / Focus areas" value={newInterview.notes} onChange={e => setNewInterview({...newInterview, notes: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', minHeight: '60px' }} />
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}><button type="button" onClick={() => setIsAdding(false)} className="btn btn-sm btn-secondary">Cancel</button><button type="button" onClick={handleAdd} className="btn btn-sm">Add</button></div>
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}><button type="button" onClick={handleCancel} className="btn btn-sm btn-secondary">Cancel</button><button type="button" onClick={handleSave} className="btn btn-sm">{editingId ? 'Update' : 'Add'}</button></div>
                 </div>
             )}
         </div>

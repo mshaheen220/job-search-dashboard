@@ -54,6 +54,16 @@ window.PRIORITY_TIERS = {
 
 window.PRIORITIES = Object.values(window.PRIORITY_TIERS);
 
+window.INTERVIEW_FORMATS = {
+    IN_PERSON: 'In Person',
+    PHONE: 'Phone',
+    VIDEO_ZOOM: 'Zoom',
+    VIDEO_TEAMS: 'Teams',
+    VIDEO_MEET: 'Google Meet',
+    VIDEO_OTHER: 'Video Call',
+    OTHER: 'Other'
+};
+
 window.FIT_LEVELS = {
             UNSET: { label: '—', value: null },
             LOW: { label: 'Long Shot', value: 1 },

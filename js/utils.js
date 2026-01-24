@@ -188,6 +188,7 @@ window.SecurityUtil = {
             interviews: Array.isArray(job.interviews) ? job.interviews.map(i => ({
                 id: i.id || Date.now().toString(36) + Math.random().toString(36).substr(2),
                 type: this.sanitizeInput(i.type, 50),
+                format: this.sanitizeInput(i.format || 'Video Call', 50),
                 date: i.date || '',
                 duration: parseInt(i.duration) || 0,
                 interviewers: Array.isArray(i.interviewers) ? i.interviewers.map(iv => ({
