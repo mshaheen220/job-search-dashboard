@@ -14,7 +14,7 @@ const InterviewManager = ({ interviews, onChange }) => {
     const { useState } = React;
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [newInterview, setNewInterview] = useState({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, date: '', duration: 30, interviewers: [], notes: '' });
+    const [newInterview, setNewInterview] = useState({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, sentiment: '', date: '', duration: 30, interviewers: [], notes: '' });
     const [tempInterviewer, setTempInterviewer] = useState({ name: '', title: '', email: '', linkedin: '' });
 
     const handleSave = () => {
@@ -25,7 +25,7 @@ const InterviewManager = ({ interviews, onChange }) => {
         }
         setIsAdding(false);
         setEditingId(null);
-        setNewInterview({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, date: '', duration: 30, interviewers: [], notes: '' });
+        setNewInterview({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, sentiment: '', date: '', duration: 30, interviewers: [], notes: '' });
         setTempInterviewer({ name: '', title: '', email: '', linkedin: '' });
     };
 
@@ -38,7 +38,7 @@ const InterviewManager = ({ interviews, onChange }) => {
     const handleCancel = () => {
         setIsAdding(false);
         setEditingId(null);
-        setNewInterview({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, date: '', duration: 30, interviewers: [], notes: '' });
+        setNewInterview({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, sentiment: '', date: '', duration: 30, interviewers: [], notes: '' });
         setTempInterviewer({ name: '', title: '', email: '', linkedin: '' });
     };
 
@@ -92,7 +92,11 @@ const InterviewManager = ({ interviews, onChange }) => {
                         <select value={newInterview.type} onChange={e => setNewInterview({...newInterview, type: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}><option>Recruiter Screen</option><option>Technical Screen</option><option>Hiring Manager</option><option>System Design</option><option>Coding Round</option><option>Behavioral</option><option>Final Round</option></select>
                         <select value={newInterview.format} onChange={e => setNewInterview({...newInterview, format: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>{Object.values(window.INTERVIEW_FORMATS).map(f => <option key={f} value={f}>{f}</option>)}</select>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}><input type="datetime-local" value={newInterview.date} onChange={e => setNewInterview({...newInterview, date: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} /><input type="number" placeholder="Duration (mins)" value={newInterview.duration} onChange={e => setNewInterview({...newInterview, duration: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 0.8fr 1fr', gap: '0.5rem' }}>
+                        <input type="datetime-local" value={newInterview.date} onChange={e => setNewInterview({...newInterview, date: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+                        <input type="number" placeholder="Mins" value={newInterview.duration} onChange={e => setNewInterview({...newInterview, duration: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+                        <select value={newInterview.sentiment} onChange={e => setNewInterview({...newInterview, sentiment: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}><option value="">How did it go?</option>{Object.values(window.INTERVIEW_SENTIMENTS).map(s => <option key={s} value={s}>{s}</option>)}</select>
+                    </div>
                     
                     <div style={{ background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-primary)' }}>
                         <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem' }}>Interviewers</div>

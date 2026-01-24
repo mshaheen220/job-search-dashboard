@@ -64,6 +64,15 @@ window.INTERVIEW_FORMATS = {
     OTHER: 'Other'
 };
 
+window.INTERVIEW_SENTIMENTS = {
+    FANTASTIC: 'Fantastic',
+    GREAT: 'Great',
+    GOOD: 'OK',
+    NEUTRAL: 'Neutral',
+    POOR: 'Poorly',
+    TERRIBLE: 'Terribly'
+};
+
 window.FIT_LEVELS = {
             UNSET: { label: '—', value: null },
             LOW: { label: 'Long Shot', value: 1 },

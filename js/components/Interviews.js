@@ -1,7 +1,11 @@
-window.Interviews = ({ jobs, onEditJob }) => {
-    const { useState, useMemo } = React;
+window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
+    const { useState, useMemo, useEffect } = React;
     const [viewType, setViewType] = useState('upcoming'); // upcoming, past
-    const [selectedCompany, setSelectedCompany] = useState('');
+    const [selectedCompany, setSelectedCompany] = useState(initialCompany || '');
+
+    useEffect(() => {
+        setSelectedCompany(initialCompany || '');
+    }, [initialCompany]);
 
     const interviews = useMemo(() => {
         const list = [];
@@ -49,6 +53,18 @@ window.Interviews = ({ jobs, onEditJob }) => {
         return '❓';
     };
 
+    const getSentimentIcon = (sentiment) => {
+        if (!sentiment) return null;
+        const s = sentiment.toLowerCase();
+        if (s.includes('fantastic')) return '💯';
+        if (s.includes('great')) return '🔥';
+        if (s.includes('ok') || s.includes('well')) return '👍';
+        if (s.includes('neutral') || s.includes('ok')) return '🤷';
+        if (s.includes('poor')) return '👎';
+        if (s.includes('terribl') || s.includes('bad')) return '🤢';
+        return null;
+    };
+
     return (
         <div className="interviews-view">
             <div className="action-bar">
@@ -80,34 +96,41 @@ window.Interviews = ({ jobs, onEditJob }) => {
                                     <div style={{ fontSize: '1rem', fontWeight: '500', marginTop: '0.25rem' }}>{interview.company}</div>
                                     <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{interview.role}</div>
                                 </div>
-                                {interview.date && <div style={{ background: 'var(--bg-tertiary)', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', minWidth: '60px', border: '1px solid var(--border-primary)' }}>
-                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{new Date(interview.date).getHours()}:{new Date(interview.date).getMinutes().toString().padStart(2, '0')}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{interview.duration}m</div>
-                                </div>}
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                                    {interview.date && <div style={{ background: 'var(--bg-tertiary)', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', minWidth: '60px', border: '1px solid var(--border-primary)' }}>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{new Date(interview.date).getHours()}:{new Date(interview.date).getMinutes().toString().padStart(2, '0')}</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{interview.duration}m</div>
+                                    </div>}
+                                </div>
                             </div>
                             
-                            {((interview.interviewers && interview.interviewers.length > 0) || interview.notes) && (
+                            {interview.interviewers && interview.interviewers.length > 0 && (
                                 <div style={{ width: '100%', background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.9rem' }}>
-                                    {interview.interviewers && interview.interviewers.length > 0 && (
-                                        <div style={{ marginBottom: interview.notes ? '0.5rem' : 0 }}>
-                                            <div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Interviewers</div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                {interview.interviewers.map((iv, idx) => (
-                                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <span>{iv.name}</span>
-                                                        {iv.title && <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{iv.title}</span>}
-                                                        {iv.linkedin && <a href={iv.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'none' }}>in</a>}
-                                                        {iv.email && <a href={`mailto:${iv.email}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>✉️</a>}
-                                                    </div>
-                                                ))}
+                                    <div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Interviewers</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                        {interview.interviewers.map((iv, idx) => (
+                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span>{iv.name}</span>
+                                                {iv.title && <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{iv.title}</span>}
+                                                {iv.linkedin && <a href={iv.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'none' }}>in</a>}
+                                                {iv.email && <a href={`mailto:${iv.email}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>✉️</a>}
                                             </div>
-                                        </div>
-                                    )}
-                                    {interview.notes && <div style={{ whiteSpace: 'pre-wrap' }}>{interview.notes}</div>}
+                                        ))}
+                                    </div>
                                 </div>
                             )}
+                            {interview.notes && <div style={{ width: '100%', background: 'var(--bg-tertiary)', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.9rem', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto' }}><div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Notes</div>
+{interview.notes}</div>}
 
-                            <button className="btn btn-secondary btn-sm" title="Edit application" style={{ marginTop: 'auto', alignSelf: 'flex-end' }} onClick={() => onEditJob(jobs.find(j => j.id === interview.jobId))}><span role="img" aria-label="Edit">✏️</span></button>
+                            <div style={{ marginTop: 'auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                {interview.sentiment ? (
+                                    <div title={'This interview round went ' + interview.sentiment} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '1.0rem', color: 'var(--text-secondary)' }}>
+                                        <span>{getSentimentIcon(interview.sentiment)}</span>
+                                        <span>{interview.sentiment}</span>
+                                    </div>
+                                ) : <div></div>}
+                                <button className="btn btn-secondary btn-sm" title="Edit application" onClick={() => onEditJob(jobs.find(j => j.id === interview.jobId))}><span role="img" aria-label="Edit">✏️</span></button>
+                            </div>
                         </div>
                     ))}
                 </div>

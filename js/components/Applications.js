@@ -1,4 +1,4 @@
-window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategories, companies, onUpdateCompany, setDeletedCategories, onAdd, onEdit, onUpdateJob, onDelete, onExport, onBackup, requestSort, getSortIcon }) => {
+window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategories, companies, onUpdateCompany, setDeletedCategories, onAdd, onEdit, onUpdateJob, onDelete, onExport, onBackup, requestSort, getSortIcon, onViewInterviews }) => {
     const { useState, useRef, useEffect } = React;
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [viewModalJob, setViewModalJob] = useState(null);
@@ -260,6 +260,15 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
                                         <div className="form-group"><label>Progression</label><input type="text" value={viewModalEdit ? editedJobData?.progression || '' : viewModalJob.progression || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, progression: e.target.value }); }} style={viewFieldStyle} /></div>
                                         <div className="form-group"><label>Priority</label><input type="text" value={viewModalEdit ? editedJobData?.priority || '' : viewModalJob.priority || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, priority: e.target.value }); }} style={viewFieldStyle} /></div>
                                     </div>
+                                    {viewModalJob.interviews && viewModalJob.interviews.length > 0 && (
+                                        <div className="form-group">
+                                            <label>Interviews</label>
+                                            <div style={{ background: 'var(--bg-tertiary)', border: '1px dashed var(--border-primary)', padding: '0.75rem', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ color: 'var(--text-primary)' }}>{viewModalJob.interviews.length} round{viewModalJob.interviews.length !== 1 ? 's' : ''}</span>
+                                                <button onClick={() => { setViewModalOpen(false); onViewInterviews(viewModalJob.company); }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem', padding: 0 }}>View details →</button>
+                                            </div>
+                                        </div>
+                                    )}
                                     {(viewModalJob.closeReason || viewModalJob.followUp) && (
                                         <div className="form-row">
                                             <div className="form-group"><label>Close reason</label><input type="text" value={viewModalEdit ? editedJobData?.closeReason || '' : viewModalJob.closeReason || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, closeReason: e.target.value }); }} style={viewFieldStyle} /></div>

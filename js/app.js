@@ -22,6 +22,7 @@ function App() {
     const [sortConfig, setSortConfig] = useState({ key: 'dateApplied', direction: 'desc' });
     const [showUpdateBanner, setShowUpdateBanner] = useState(false);
     const [currentLastModified, setCurrentLastModified] = useState(null);
+    const [initialInterviewCompany, setInitialInterviewCompany] = useState('');
 
     useEffect(() => {
         document.title = `${window.APP_CONFIG.APP_NAME} - ${window.APP_CONFIG.AUTHOR_NAME}`;
@@ -443,6 +444,11 @@ function App() {
         });
     }, 1000);
 
+    const handleHeaderViewChange = (newView) => {
+        setInitialInterviewCompany('');
+        setView(newView);
+    };
+
     return (
         <div className="app">
             {showUpdateBanner && (
@@ -457,7 +463,7 @@ function App() {
                     </div>
                 </div>
             )}
-            <window.Header view={view} setView={setView} onBackup={exportBackup} onImport={() => setShowImportModal(true)} lastBackupTime={lastBackupTime} theme={theme} toggleTheme={toggleTheme} />
+            <window.Header view={view} setView={handleHeaderViewChange} onBackup={exportBackup} onImport={() => setShowImportModal(true)} lastBackupTime={lastBackupTime} theme={theme} toggleTheme={toggleTheme} />
             <main className="main">
                 {view === "dashboard" && <window.AnalyticsDashboard jobs={jobs} />}
                 {view === "companies" && <window.Companies
@@ -492,8 +498,9 @@ function App() {
                     onBackup={exportBackup}
                     requestSort={requestSort}
                     getSortIcon={getSortIcon}
+                    onViewInterviews={(company) => { setInitialInterviewCompany(company); setView('interviews'); }}
                 />}
-                {view === "interviews" && <window.Interviews jobs={jobs} onEditJob={(job) => { setEditingJob(job); setShowModal(true); }} />}
+                {view === "interviews" && <window.Interviews jobs={jobs} initialCompany={initialInterviewCompany} onEditJob={(job) => { setEditingJob(job); setShowModal(true); }} />}
                 {view === "stats" && <window.Stats jobs={jobs} />}
             </main>
             {showModal && (
