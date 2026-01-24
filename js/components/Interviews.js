@@ -124,9 +124,9 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
 
                             <div style={{ marginTop: 'auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 {interview.sentiment ? (
-                                    <div title={'This interview round went ' + interview.sentiment} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '1.0rem', color: 'var(--text-secondary)' }}>
+                                    <div title={'This interview round went ' + interview.sentiment} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '2.0rem', color: 'var(--text-secondary)' }}>
                                         <span>{getSentimentIcon(interview.sentiment)}</span>
-                                        <span>{interview.sentiment}</span>
+                                        {/* <span>{interview.sentiment}</span> */}
                                     </div>
                                 ) : <div></div>}
                                 <button className="btn btn-secondary btn-sm" title="Edit application" onClick={() => onEditJob(jobs.find(j => j.id === interview.jobId))}><span role="img" aria-label="Edit">✏️</span></button>
