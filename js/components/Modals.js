@@ -10,12 +10,28 @@ const BaseModal = ({ title, onClose, children, maxWidth }) => (
 const Input = ({ label, type = "text", ...p }) => <div className="form-group"><label>{label}</label><input type={type} {...p} /></div>;
 const Select = ({ label, children, ...p }) => <div className="form-group"><label>{label}</label><select {...p}>{children}</select></div>;
 
-const InterviewManager = ({ interviews, onChange }) => {
-    const { useState } = React;
+const InterviewManager = ({ interviews, onChange, initialEditingInterviewId }) => {
+    const { useState, useEffect, useRef } = React;
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [newInterview, setNewInterview] = useState({ type: 'Recruiter Screen', format: window.INTERVIEW_FORMATS.VIDEO_OTHER, sentiment: '', date: '', duration: 30, interviewers: [], notes: '' });
     const [tempInterviewer, setTempInterviewer] = useState({ name: '', title: '', email: '', linkedin: '' });
+    const formRef = useRef(null);
+
+    useEffect(() => {
+        if (initialEditingInterviewId) {
+            const interview = interviews.find(i => i.id === initialEditingInterviewId);
+            if (interview) {
+                setNewInterview({ ...interview });
+                setEditingId(initialEditingInterviewId);
+                setIsAdding(true);
+                // Scroll to form
+                setTimeout(() => {
+                    if (formRef.current) formRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            }
+        }
+    }, []);
 
     const handleSave = () => {
         if (editingId) {
@@ -87,7 +103,7 @@ const InterviewManager = ({ interviews, onChange }) => {
             )}
 
             {isAdding && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px dashed var(--accent-primary)' }}>
+                <div ref={formRef} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px dashed var(--accent-primary)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                         <select value={newInterview.type} onChange={e => setNewInterview({...newInterview, type: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}><option>Recruiter Screen</option><option>Technical Screen</option><option>Hiring Manager</option><option>System Design</option><option>Coding Round</option><option>Behavioral</option><option>Final Round</option></select>
                         <select value={newInterview.format} onChange={e => setNewInterview({...newInterview, format: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>{Object.values(window.INTERVIEW_FORMATS).map(f => <option key={f} value={f}>{f}</option>)}</select>
@@ -101,12 +117,12 @@ const InterviewManager = ({ interviews, onChange }) => {
                     <div style={{ background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-primary)' }}>
                         <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem' }}>Interviewers</div>
                         {newInterview.interviewers.map((iv, idx) => (
-                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem', padding: '0.25rem', background: 'var(--bg-tertiary)', borderRadius: '4px' }}>
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem', padding: '0.25rem', background: 'color-mix(in srgb, var(--accent-primary), transparent 90%)', borderRadius: '4px' }}>
                                 <span>{iv.name} {iv.title && `(${iv.title})`}</span>
-                                <button type="button" onClick={() => setNewInterview(prev => ({ ...prev, interviewers: prev.interviewers.filter((_, i) => i !== idx) }))} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>×</button>
+                                <button type="button" onClick={() => setNewInterview(prev => ({ ...prev, interviewers: prev.interviewers.filter((_, i) => i !== idx) }))} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', marginRight: '0.25rem' }}>×</button>
                             </div>
                         ))}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', marginTop: '1.0rem', borderTop: '1px dashed var(--border-primary)', paddingTop: '0.5rem' }}>
                             <input type="text" placeholder="Name" value={tempInterviewer.name} onChange={e => setTempInterviewer({...tempInterviewer, name: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
                             <input type="text" placeholder="Title" value={tempInterviewer.title} onChange={e => setTempInterviewer({...tempInterviewer, title: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
                             <input type="email" placeholder="Email" value={tempInterviewer.email} onChange={e => setTempInterviewer({...tempInterviewer, email: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
@@ -123,7 +139,7 @@ const InterviewManager = ({ interviews, onChange }) => {
     );
 };
 
-window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, companyCategories }) => {
+window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, companyCategories, initialEditingInterviewId }) => {
     const { useState, useMemo } = React;
     const [newCategoryColors, setNewCategoryColors] = useState({});
     const [formData, setFormData] = useState(() => {
@@ -171,7 +187,7 @@ window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, c
                         <Select label="Priority" value={formData.priority} onChange={update('priority')}>{window.PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}</Select>
                     </div>
                     <div className="form-row"><div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={formData.fitLevel} onChange={(val) => setFormData(prev => ({ ...prev, fitLevel: val }))} /></div></div>
-                    <InterviewManager interviews={formData.interviews} onChange={(newInterviews) => setFormData(prev => ({ ...prev, interviews: newInterviews }))} />
+                    <InterviewManager interviews={formData.interviews} onChange={(newInterviews) => setFormData(prev => ({ ...prev, interviews: newInterviews }))} initialEditingInterviewId={initialEditingInterviewId} />
                     {formData.status === "Closed" && (
                         <div className="form-row">
                             <Select label="Close reason *" required value={formData.closeReason || ""} onChange={update('closeReason')}><option value="">Select a reason...</option>{Object.values(window.CLOSE_REASONS).map(r => <option key={r} value={r}>{r}</option>)}</Select>

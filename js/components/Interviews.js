@@ -129,7 +129,7 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
                                         {/* <span>{interview.sentiment}</span> */}
                                     </div></window.Tooltip>
                                 ) : <div></div>}
-                                <window.Tooltip text="Edit application"><button className="btn btn-secondary btn-sm" onClick={() => onEditJob(jobs.find(j => j.id === interview.jobId))}><span role="img" aria-label="Edit">✏️</span></button></window.Tooltip>
+                                <window.Tooltip text="Edit interview details"><button className="btn btn-secondary btn-sm" onClick={() => onEditJob(jobs.find(j => j.id === interview.jobId), interview.id)}><span role="img" aria-label="Edit">✏️</span></button></window.Tooltip>
                             </div>
                         </div>
                     ))}

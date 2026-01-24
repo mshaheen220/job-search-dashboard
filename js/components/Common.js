@@ -118,12 +118,19 @@ window.CategoryList = ({ categories, categoryColors }) => {
 window.Tooltip = ({ text, children, style }) => {
     const [show, setShow] = React.useState(false);
     const [coords, setCoords] = React.useState({ top: 0, left: 0 });
+    const [placement, setPlacement] = React.useState('top');
     const wrapperRef = React.useRef(null);
 
     const handleMouseEnter = () => {
         if (wrapperRef.current) {
             const rect = wrapperRef.current.getBoundingClientRect();
-            setCoords({ top: rect.top - 8, left: rect.left + (rect.width / 2) });
+            if (rect.top < 40) {
+                setCoords({ top: rect.bottom + 8, left: rect.left + (rect.width / 2) });
+                setPlacement('bottom');
+            } else {
+                setCoords({ top: rect.top - 8, left: rect.left + (rect.width / 2) });
+                setPlacement('top');
+            }
             setShow(true);
         }
     };
@@ -143,7 +150,7 @@ window.Tooltip = ({ text, children, style }) => {
         >
             {childWithAria}
             {show && text && ReactDOM.createPortal(
-                <div className="tooltip-popup" style={{ position: 'fixed', top: coords.top, left: coords.left, transform: 'translate(-50%, -100%)', margin: 0, bottom: 'auto', zIndex: 10000 }}>
+                <div className="tooltip-popup" style={{ position: 'fixed', top: coords.top, left: coords.left, transform: placement === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)', margin: 0, bottom: 'auto', zIndex: 10000 }}>
                     {text}
                 </div>,
                 document.body

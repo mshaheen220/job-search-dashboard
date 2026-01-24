@@ -17,6 +17,7 @@ function App() {
     const [showCompanyModal, setShowCompanyModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [editingJob, setEditingJob] = useState(null);
+    const [editingInterviewId, setEditingInterviewId] = useState(null);
     const [lastBackupTime, setLastBackupTime] = useState(null);
     const [filters, setFilters] = useState({ status: "all", priority: "all", company: "", search: "" });
     const [sortConfig, setSortConfig] = useState({ key: 'dateApplied', direction: 'desc' });
@@ -500,14 +501,15 @@ function App() {
                     getSortIcon={getSortIcon}
                     onViewInterviews={(company) => { setInitialInterviewCompany(company); setView('interviews'); }}
                 />}
-                {view === "interviews" && <window.Interviews jobs={jobs} initialCompany={initialInterviewCompany} onEditJob={(job) => { setEditingJob(job); setShowModal(true); }} />}
+                {view === "interviews" && <window.Interviews jobs={jobs} initialCompany={initialInterviewCompany} onEditJob={(job, interviewId) => { setEditingJob(job); setEditingInterviewId(interviewId); setShowModal(true); }} />}
                 {view === "stats" && <window.Stats jobs={jobs} />}
             </main>
             {showModal && (
                 <window.JobModal 
                     job={editingJob} 
+                    initialEditingInterviewId={editingInterviewId}
                     onSave={editingJob?.id ? updateJob : addJob} 
-                    onClose={() => { setShowModal(false); setEditingJob(null); }} 
+                    onClose={() => { setShowModal(false); setEditingJob(null); setEditingInterviewId(null); }} 
                     existingCategories={Object.keys(allCompanies)}
                     categoryColors={categoryColors}
                     companyCategories={editingJob ? (customCompanies[editingJob.company]?.categories || []) : []}
