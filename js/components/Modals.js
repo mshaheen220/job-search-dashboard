@@ -50,9 +50,7 @@ window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, c
                         <Select label="Status *" value={formData.status} onChange={update('status')}>{window.STATUSES.map(s => <option key={s} value={s}>{s}</option>)}</Select>
                         <Input label="Date applied" type="date" value={formData.dateApplied} onChange={update('dateApplied')} />
                     </div>
-                    <div className="form-row">
-                        <window.CategorySelector allCategories={displayCategories} selectedCategories={formData.categories} categoryColors={displayColors} onToggleCategory={toggleCategory} onAddCategory={handleAddCategory} />
-                    </div>
+                    <window.CategorySelector allCategories={displayCategories} selectedCategories={formData.categories} categoryColors={displayColors} onToggleCategory={toggleCategory} onAddCategory={handleAddCategory} onClear={() => setFormData(prev => ({ ...prev, categories: [] }))} />
                     <div className="form-row">
                         {(formData.status === "In Progress" || formData.status === "Closed") && (
                             <Select label={`Progression ${formData.status === "Closed" ? "(final stage)" : ""}`} value={formData.progression || ""} onChange={update('progression')}><option value="">Select progression...</option>{window.PROGRESSIONS.map(p => <option key={p} value={p}>{p}</option>)}</Select>
@@ -171,7 +169,7 @@ window.CompanyModal = ({ onSave, onClose, existingCategories, categoryColors }) 
                     <div className="modal-body">
                     <Input label="Company name *" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Acme Corp" />
                     <Input label="Careers page URL *" type="url" required value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} placeholder="https://company.com/careers/jobs" />
-                    <window.CategorySelector allCategories={existingCategories} selectedCategories={formData.categories} categoryColors={categoryColors} onToggleCategory={toggleCategory} onAddCategory={handleAddCategory} />
+                    <window.CategorySelector allCategories={existingCategories} selectedCategories={formData.categories} categoryColors={categoryColors} onToggleCategory={toggleCategory} onAddCategory={handleAddCategory} onClear={() => setFormData(prev => ({ ...prev, categories: [] }))} />
                     <div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={formData.fitLevel} onChange={(val) => setFormData({ ...formData, fitLevel: val })} /></div>
                     </div>
                     <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button><button type="submit" className="btn">Add company</button></div>

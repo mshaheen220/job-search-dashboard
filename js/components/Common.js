@@ -63,6 +63,58 @@ window.FitLevelSelect = ({ value, onChange }) => {
     );
 };
 
+window.CategoryList = ({ categories, categoryColors }) => {
+    const { useState, useRef, useLayoutEffect } = React;
+    const [expanded, setExpanded] = useState(false);
+    const [showToggle, setShowToggle] = useState(false);
+    const containerRef = useRef(null);
+
+    const getCategoryClassName = (category) => {
+        const classMap = { 'Developer Tools': 'category-developer-tools', 'Data Infrastructure': 'category-data-infrastructure', 'Cloud/Infrastructure': 'category-cloud-infrastructure', 'Enterprise Software': 'category-enterprise-software', 'Consumer Tech': 'category-consumer-tech', 'None': 'category-none' };
+        if (classMap[category]) return `category-pill ${classMap[category]}`;
+        let hash = 0; for (let i = 0; i < category.length; i++) { hash = ((hash << 5) - hash) + category.charCodeAt(i); hash = hash & hash; }
+        const colorIndex = Math.abs(hash) % 12; return `category-pill category-custom-${colorIndex}`;
+    };
+    
+    const getCategoryStyle = (category) => {
+        if (categoryColors && categoryColors[category]) {
+            return { backgroundColor: categoryColors[category] + '20', color: categoryColors[category], border: `1px solid ${categoryColors[category]}` };
+        }
+        return {};
+    };
+
+    useLayoutEffect(() => {
+        if (containerRef.current) {
+            if (containerRef.current.scrollHeight > containerRef.current.clientHeight) {
+                setShowToggle(true);
+            } else if (!expanded) {
+                setShowToggle(false);
+            }
+        }
+    }, [categories, expanded]);
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+            <div 
+                ref={containerRef}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', maxHeight: expanded ? 'none' : '60px', overflow: 'hidden', width: '100%', transition: 'max-height 0.3s ease' }}
+            >
+                {categories.map(cat => (
+                    <span key={cat} className={getCategoryClassName(cat)} style={getCategoryStyle(cat)}>{cat}</span>
+                ))}
+            </div>
+            {(showToggle || expanded) && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.75rem', cursor: 'pointer', padding: '0.25rem 0', marginTop: '0.1rem', textDecoration: 'underline' }}
+                >
+                    {expanded ? 'Show less' : 'Show more'}
+                </button>
+            )}
+        </div>
+    );
+};
+
 window.CategorySelector = ({ 
     allCategories, 
     selectedCategories, 
@@ -71,9 +123,22 @@ window.CategorySelector = ({
     onAddCategory,
     onClear
 }) => {
-    const { useState } = React;
+    const { useState, useRef, useLayoutEffect } = React;
     const [newCategory, setNewCategory] = useState('');
     const [newCategoryColor, setNewCategoryColor] = useState('#3b82f6');
+    const [expanded, setExpanded] = useState(false);
+    const [showToggle, setShowToggle] = useState(false);
+    const containerRef = useRef(null);
+
+    useLayoutEffect(() => {
+        if (containerRef.current) {
+            if (containerRef.current.scrollHeight > containerRef.current.clientHeight) {
+                setShowToggle(true);
+            } else if (!expanded) {
+                setShowToggle(false);
+            }
+        }
+    }, [allCategories, expanded]);
 
     const handleAdd = () => {
         if (!newCategory.trim()) return;
@@ -88,7 +153,10 @@ window.CategorySelector = ({
                 <label style={{ marginBottom: 0 }}>Categories</label>
                 {onClear && <button type="button" onClick={onClear} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <div 
+                ref={containerRef}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem', maxHeight: expanded ? 'none' : '85px', overflow: 'hidden', transition: 'max-height 0.3s ease' }}
+            >
                 {allCategories.map(cat => {
                     const isSelected = selectedCategories.includes(cat);
                     const color = categoryColors && categoryColors[cat] ? categoryColors[cat] : 'var(--accent-primary)';
@@ -109,6 +177,15 @@ window.CategorySelector = ({
                     );
                 })}
             </div>
+            {(showToggle || expanded) && (
+                <button 
+                    type="button"
+                    onClick={() => setExpanded(!expanded)}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.8rem', cursor: 'pointer', padding: '0 0 0.5rem 0', textDecoration: 'underline', display: 'block' }}
+                >
+                    {expanded ? 'Show less' : 'Show more'}
+                </button>
+            )}
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Or create new category..." style={{ flex: 1 }} />
                 {newCategory && <input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} style={{ width: '40px', height: '40px', padding: 0, border: 'none', background: 'none' }} title="Choose category color" />}
