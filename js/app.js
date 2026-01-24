@@ -252,7 +252,7 @@ function App() {
             if (job.newCategoryColors) {
                 setCategoryColors(prev => ({ ...prev, ...job.newCategoryColors }));
             }
-            window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); 
+            window.PerformanceUtil.clearCache('sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); 
             const duration = performance.now() - startTime; 
             window.LoggerUtil.trackPerformance('addJob', duration, true); 
             window.LoggerUtil.trackAction('job_added', 'job_management', { jobId: validatedJob.id }); 
@@ -285,7 +285,7 @@ function App() {
             if (company.newCategoryColors) { setCategoryColors(prev => ({ ...prev, ...company.newCategoryColors })); } 
             if (company.newCategory && company.newCategoryColor) { setCategoryColors(prev => ({ ...prev, [company.newCategory]: company.newCategoryColor })); } 
             
-            window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); 
+            window.PerformanceUtil.clearCache('sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); 
             const duration = performance.now() - startTime; 
             window.LoggerUtil.trackPerformance('addCompany', duration, true); 
             window.LoggerUtil.trackAction('company_added', 'company_management', { company: validatedCompany.name }); 
@@ -326,7 +326,7 @@ function App() {
             if (updatedJob.newCategoryColors) {
                 setCategoryColors(prev => ({ ...prev, ...updatedJob.newCategoryColors }));
             }
-            window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); 
+            window.PerformanceUtil.clearCache('sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); 
             const duration = performance.now() - startTime; 
             window.LoggerUtil.trackPerformance('updateJob', duration, true); 
             window.LoggerUtil.trackAction('job_updated', 'job_management', { jobId: validatedJob.id }); 
@@ -334,7 +334,7 @@ function App() {
             setShowModal(false); setEditingJob(null); 
         } catch (error) { window.LoggerUtil.error('Error updating job', { error: error.message }); window.SecurityUtil.handleError(error, 'updating job'); } 
     };
-    const deleteJob = (id) => { if (confirm("Are you sure you want to delete this job?")) { const startTime = performance.now(); setJobs(jobs.filter(j => j.id !== id)); window.PerformanceUtil.clearCache('jobIndex', 'sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); const duration = performance.now() - startTime; window.LoggerUtil.trackPerformance('deleteJob', duration, true); window.LoggerUtil.trackAction('job_deleted', 'job_management', { jobId: id }); } };
+    const deleteJob = (id) => { if (confirm("Are you sure you want to delete this job?")) { const startTime = performance.now(); setJobs(jobs.filter(j => j.id !== id)); window.PerformanceUtil.clearCache('sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); const duration = performance.now() - startTime; window.LoggerUtil.trackPerformance('deleteJob', duration, true); window.LoggerUtil.trackAction('job_deleted', 'job_management', { jobId: id }); } };
     const exportToCSV = () => { const headers = ["Company", "Role", "Status", "Priority", "Date applied", "URL", "Salary", "Location", "Contact name", "Notes"]; const rows = jobs.map(j => [j.company, j.role, j.status, j.priority, new Date(j.dateApplied).toLocaleDateString(), j.url, j.salary || "", j.location || "", j.contact || "", j.notes || ""]); const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n"); const blob = new Blob([csv], { type: "text/csv" }); const url = window.URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `job-search-${new Date().toISOString().split('T')[0]}.csv`; a.click(); };
     const exportBackup = () => { try { const backupData = { jobs: jobs, customCompanies: customCompanies, blockedCompanies: blockedCompanies }; const backup = { version: window.APP_CONFIG.VERSION, exportDate: new Date().toISOString(), checksum: window.SecurityUtil.generateChecksum(backupData), data: backupData }; const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }); const url = window.URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `job-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); window.URL.revokeObjectURL(url); const now = new Date(); setLastBackupTime(now); window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.LAST_BACKUP, now.toISOString()); alert("Backup downloaded successfully!"); } catch (error) { window.SecurityUtil.handleError(error, 'exporting backup'); } };
     const importBackup = (fileContent, mode = 'replace') => {
@@ -354,14 +354,12 @@ function App() {
                 const mergedJobs = [...jobs, ...newJobs];
                 setJobs(mergedJobs);
                 window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.JOBS, mergedJobs);
-                window.PerformanceUtil.clearCache('jobIndex');
                 window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                 if (importData.customCompanies && typeof importData.customCompanies === 'object') {
                     const mergedCompanies = { ...customCompanies };
                     for (const [name, data] of Object.entries(importData.customCompanies)) { try { mergedCompanies[name] = window.SecurityUtil.validateCompanyData({ ...data, name }); } catch (err) { console.warn(`Skipping invalid company ${name}:`, err); } }
                     setCustomCompanies(mergedCompanies);
                     window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, mergedCompanies);
-                    window.PerformanceUtil.clearCache('jobIndex');
                     window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                 }
                 if (importData.blockedCompanies && Array.isArray(importData.blockedCompanies)) {
@@ -369,7 +367,6 @@ function App() {
                     const mergedBlocked = [...new Set([...blockedCompanies, ...sanitizedBlocked])];
                     setBlockedCompanies(mergedBlocked);
                     try { localStorage.setItem('blockedCompanies', JSON.stringify(mergedBlocked)); } catch { }
-                    window.PerformanceUtil.clearCache('jobIndex');
                     window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                 }
                 const skipped = validJobs.length - newJobs.length;
@@ -378,21 +375,18 @@ function App() {
                 if (validJobs.length > window.SecurityUtil.CONFIG.MAX_JOBS_COUNT) throw new Error(`Import exceeds maximum jobs limit: ${validJobs.length} > ${window.SecurityUtil.CONFIG.MAX_JOBS_COUNT}`);
                 setJobs(validJobs);
                 window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.JOBS, validJobs);
-                window.PerformanceUtil.clearCache('jobIndex');
                 window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                 if (importData.customCompanies && typeof importData.customCompanies === 'object') {
                     const validCompanies = {};
                     for (const [name, data] of Object.entries(importData.customCompanies)) { try { validCompanies[name] = window.SecurityUtil.validateCompanyData({ ...data, name }); } catch (err) { console.warn(`Skipping invalid company ${name}:`, err); } }
                     setCustomCompanies(validCompanies);
                     window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, validCompanies);
-                    window.PerformanceUtil.clearCache('jobIndex');
                     window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                 }
                 if (importData.blockedCompanies && Array.isArray(importData.blockedCompanies)) {
                     const sanitized = importData.blockedCompanies.filter(name => typeof name === 'string').map(name => window.SecurityUtil.sanitizeInput(name, 200));
                     setBlockedCompanies(sanitized);
                     try { localStorage.setItem('blockedCompanies', JSON.stringify(sanitized)); } catch { }
-                    window.PerformanceUtil.clearCache('jobIndex');
                     window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                 }
                 alert(`Import complete!\n\nImported ${validJobs.length} jobs successfully!`);
@@ -419,20 +413,6 @@ function App() {
     };
 
     const getSortIcon = (columnKey) => { if (sortConfig.key !== columnKey) return ' ⇅'; return sortConfig.direction === 'asc' ? ' ↑' : ' ↓'; };
-
-    const jobIndex = window.PerformanceUtil.memoize('jobIndex', () => {
-        const index = { byId: new Map(), byStatus: {}, byPriority: {}, byCompany: {} };
-        jobs.forEach(job => {
-            index.byId.set(job.id, job);
-            if (!index.byStatus[job.status]) index.byStatus[job.status] = [];
-            index.byStatus[job.status].push(job);
-            if (!index.byPriority[job.priority]) index.byPriority[job.priority] = [];
-            index.byPriority[job.priority].push(job);
-            if (!index.byCompany[job.company]) index.byCompany[job.company] = [];
-            index.byCompany[job.company].push(job);
-        });
-        return index;
-    }, 10000);
 
     const sortedJobs = window.PerformanceUtil.memoize(`sortedJobs_${sortConfig.key}_${sortConfig.direction}`, () => {
         return window.PerformanceUtil.measure('sorting', () => {
@@ -462,16 +442,6 @@ function App() {
             });
         });
     }, 1000);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const report = window.PerformanceUtil.getReport();
-            if (Object.keys(report.operationStats).length > 0) { window.LoggerUtil.info('Performance Report', report); }
-            window.PerformanceUtil.cleanup();
-            window.LoggerUtil.info('Memory Cleanup', window.PerformanceUtil.getMemoryStats());
-        }, 60000);
-        return () => { clearInterval(interval); window.PerformanceUtil.cleanup(); };
-    }, []);
 
     return (
         <div className="app">

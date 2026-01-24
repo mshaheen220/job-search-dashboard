@@ -14,20 +14,24 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
     const [dateRangeFilter, setDateRangeFilter] = useState({ start: '', end: '' });
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedPriorities, setSelectedPriorities] = useState([]);
+    const [selectedFitLevels, setSelectedFitLevels] = useState([]);
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+    const [showFitLevelDropdown, setShowFitLevelDropdown] = useState(false);
     const [showCategoryManager, setShowCategoryManager] = useState(false);
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (showStatusDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="status"]')) setShowStatusDropdown(false);
             if (showPriorityDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="priority"]')) setShowPriorityDropdown(false);
+            if (showFitLevelDropdown && !event.target.closest('.filter-select') && !event.target.closest('[data-dropdown="fitlevel"]')) setShowFitLevelDropdown(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showStatusDropdown, showPriorityDropdown]);
+    }, [showStatusDropdown, showPriorityDropdown, showFitLevelDropdown]);
     const filteredJobs = jobs.filter(job => {
         if (selectedStatuses.length > 0 && !selectedStatuses.includes(job.status)) return false;
         if (selectedPriorities.length > 0 && !selectedPriorities.includes(job.priority)) return false;
+        if (selectedFitLevels.length > 0) { const jobFitLabel = window.getFitLevelLabel(job.fitLevel || null); if (!selectedFitLevels.includes(jobFitLabel)) return false; }
         if (dateRangeFilter.start || dateRangeFilter.end) {
             const jobDate = new Date(job.dateApplied);
             if (dateRangeFilter.start && jobDate < new Date(dateRangeFilter.start)) return false;
@@ -40,9 +44,9 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
     const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
-    useEffect(() => { setCurrentPage(1); }, [filters.search, selectedStatuses.length, selectedPriorities.length, dateRangeFilter]);
-    const activeFiltersCount = [filters.search, selectedStatuses.length > 0, selectedPriorities.length > 0, dateRangeFilter.start || dateRangeFilter.end].filter(Boolean).length;
-    const clearFilters = () => { setFilters({ status: 'all', priority: 'all', company: '', search: '' }); setSelectedStatuses([]); setSelectedPriorities([]); setDateRangeFilter({ start: '', end: '' }); };
+    useEffect(() => { setCurrentPage(1); }, [filters.search, selectedStatuses.length, selectedPriorities.length, selectedFitLevels.length, dateRangeFilter]);
+    const activeFiltersCount = [filters.search, selectedStatuses.length > 0, selectedPriorities.length > 0, selectedFitLevels.length > 0, dateRangeFilter.start || dateRangeFilter.end].filter(Boolean).length;
+    const clearFilters = () => { setFilters({ status: 'all', priority: 'all', company: '', search: '' }); setSelectedStatuses([]); setSelectedPriorities([]); setSelectedFitLevels([]); setDateRangeFilter({ start: '', end: '' }); };
     const handleQuickClose = (job) => {
         const today = new Date().toISOString().split('T')[0];
         if (!confirm(`Close "${job.role}" at ${job.company} as Rejected today?`)) return;
@@ -51,6 +55,7 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
     const toggleColumn = (key) => { setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] })); };
     const toggleStatus = (status) => { setSelectedStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]); };
     const togglePriority = (priority) => { setSelectedPriorities(prev => prev.includes(priority) ? prev.filter(p => p !== priority) : [...prev, priority]); };
+    const toggleFitLevel = (level) => { setSelectedFitLevels(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]); };
     const getAgeIcon = (dateStr, status) => {
         if (!dateStr) return null;
         const applied = new Date(dateStr + 'T00:00:00');
@@ -80,19 +85,6 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
         return <span className={className} title={title} />;
     };
 
-    const getCategoryClassName = (category) => {
-        const classMap = { 'Developer Tools': 'category-developer-tools', 'Data Infrastructure': 'category-data-infrastructure', 'Cloud/Infrastructure': 'category-cloud-infrastructure', 'Enterprise Software': 'category-enterprise-software', 'Consumer Tech': 'category-consumer-tech', 'None': 'category-none' };
-        if (classMap[category]) return `category-pill ${classMap[category]}`;
-        let hash = 0; for (let i = 0; i < category.length; i++) { hash = ((hash << 5) - hash) + category.charCodeAt(i); hash = hash & hash; }
-        const colorIndex = Math.abs(hash) % 12; return `category-pill category-custom-${colorIndex}`;
-    };
-    
-    const getCategoryStyle = (category) => {
-        if (categoryColors && categoryColors[category]) {
-            return { backgroundColor: categoryColors[category] + '20', color: categoryColors[category], border: `1px solid ${categoryColors[category]}` };
-        }
-        return {};
-    };
     const handleAddCategory = (name, color) => { 
         if (!name.trim()) return; 
         if (existingCategories.includes(name)) { alert('Category already exists'); return; } 
@@ -137,8 +129,17 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
                                 </div>
                             )}
                         </div>
+                        {visibleColumns.fitLevel && (<div style={{ position: "relative" }}>
+                            <button className="filter-select" onClick={() => setShowFitLevelDropdown(!showFitLevelDropdown)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", minWidth: "160px", cursor: "pointer" }}><span>{selectedFitLevels.length === 0 ? 'All fit levels' : `Fit level (${selectedFitLevels.length})`}</span><span style={{ fontSize: "0.7rem" }}>▼</span></button>
+                            {showFitLevelDropdown && (
+                                <div data-dropdown="fitlevel" style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "var(--bg-elevated)", border: "1px solid var(--border-primary)", borderRadius: "10px", padding: "0.5rem", boxShadow: "var(--shadow-lg)", zIndex: 1000, minWidth: "200px" }}>
+                                    <button onClick={() => setSelectedFitLevels([])} style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem", background: "var(--bg-hover)", border: "1px solid var(--border-primary)", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500", transition: "all 0.2s" }}>Clear all</button>
+                                    {[window.FIT_LEVELS.HIGH.label, window.FIT_LEVELS.MEDIUM.label, window.FIT_LEVELS.LOW.label, window.FIT_LEVELS.UNSET.label].map(level => (<label key={level} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem", cursor: "pointer", borderRadius: "6px", transition: "background 0.2s", fontSize: "0.9rem", color: "var(--text-primary)" }}><input type="checkbox" checked={selectedFitLevels.includes(level)} onChange={() => toggleFitLevel(level)} style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--accent-primary)" }} /><span>{level}</span></label>))}
+                                </div>
+                            )}
+                        </div>)}
                         <button className={`advanced-filters-toggle ${showAdvancedFilters ? 'active' : ''}`} onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} style={{ background: showAdvancedFilters ? "var(--accent-primary)" : "var(--bg-tertiary)", color: showAdvancedFilters ? "white" : "var(--text-secondary)", border: "1px solid var(--border-primary)", padding: "0.6rem 1rem", borderRadius: "10px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "500", display: "flex", alignItems: "center", gap: "0.5rem", transition: "all 0.2s ease" }}>📅 Application date {activeFiltersCount > 0 && ` (${activeFiltersCount})`}</button>
-                        {(filters.search || selectedStatuses.length > 0 || selectedPriorities.length > 0 || dateRangeFilter.start || dateRangeFilter.end) && (<button onClick={clearFilters} style={{ background: "transparent", color: "var(--accent-primary)", border: "none", padding: "0.6rem 0.75rem", borderRadius: "10px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "500", transition: "all 0.2s ease", whiteSpace: "nowrap" }}>Clear all</button>)}
+                        {(filters.search || selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedFitLevels.length > 0 || dateRangeFilter.start || dateRangeFilter.end) && (<button onClick={clearFilters} style={{ background: "transparent", color: "var(--accent-primary)", border: "none", padding: "0.6rem 0.75rem", borderRadius: "10px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "500", transition: "all 0.2s ease", whiteSpace: "nowrap" }}>Clear all</button>)}
                     </div>
                 </div>
                 <button className="btn btn-secondary" onClick={() => setShowColumnSelector(!showColumnSelector)}>⚙️ Columns</button>
@@ -192,9 +193,7 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
                                         {visibleColumns.status && <td><window.StatusBadge status={job.status} /></td>}
                                         {visibleColumns.categories && (
                                             <td>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                                                    {(job.categories || []).map(cat => (<span key={cat} className={getCategoryClassName(cat)} style={getCategoryStyle(cat)}>{cat}</span>))}
-                                                </div>
+                                                <window.CategoryList categories={job.categories || []} categoryColors={categoryColors} />
                                             </td>
                                         )}
                                         {visibleColumns.priority && <td><window.PriorityBadge priority={job.priority} /></td>}

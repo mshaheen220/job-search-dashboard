@@ -1,4 +1,4 @@
-window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, deletedCategories, categoryColors, setDeletedCategories, onUpdateCompany, onDeleteCompany, onRemoveCompany, onAddJob, onAddCompany, onViewCompanyJobs, onUnhideCompany }) => {
+window.Companies = ({ companies, jobs, blockedCompanies, deletedCategories, categoryColors, setDeletedCategories, onUpdateCompany, onDeleteCompany, onRemoveCompany, onAddJob, onAddCompany, onViewCompanyJobs, onUnhideCompany }) => {
     const { useState, useEffect } = React;
     const [searchTerm, setSearchTerm] = useState("");
     const [sortConfig, setSortConfig] = useState({ key: 'company', direction: 'asc' });
@@ -129,7 +129,7 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                         {showFitLevelDropdown && (
                             <div data-dropdown="fitlevel" style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "var(--bg-elevated)", border: "1px solid var(--border-primary)", borderRadius: "10px", padding: "0.5rem", boxShadow: "var(--shadow-lg)", zIndex: 1000, minWidth: "200px" }}>
                                 <button onClick={() => setSelectedFitLevels([])} style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem", background: "var(--bg-hover)", border: "1px solid var(--border-primary)", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500", transition: "all 0.2s" }}>Clear all</button>
-                                {['Strong', 'Decent', 'Long shot', '—'].map(level => (<label key={level} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem", cursor: "pointer", borderRadius: "6px", transition: "background 0.2s", fontSize: "0.9rem", color: "var(--text-primary)" }}><input type="checkbox" checked={selectedFitLevels.includes(level)} onChange={(e) => { if (e.target.checked) { setSelectedFitLevels([...selectedFitLevels, level]); } else { setSelectedFitLevels(selectedFitLevels.filter(l => l !== level)); } }} style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--accent-primary)" }} /><span>{level}</span></label>))}
+                                {[window.FIT_LEVELS.HIGH.label, window.FIT_LEVELS.MEDIUM.label, window.FIT_LEVELS.LOW.label, window.FIT_LEVELS.UNSET.label].map(level => (<label key={level} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem", cursor: "pointer", borderRadius: "6px", transition: "background 0.2s", fontSize: "0.9rem", color: "var(--text-primary)" }}><input type="checkbox" checked={selectedFitLevels.includes(level)} onChange={(e) => { if (e.target.checked) { setSelectedFitLevels([...selectedFitLevels, level]); } else { setSelectedFitLevels(selectedFitLevels.filter(l => l !== level)); } }} style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--accent-primary)" }} /><span>{level}</span></label>))}
                             </div>
                         )}
                     </div>
@@ -163,31 +163,13 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                             {sortedCompaniesList.map(company => {
                                 const isHidden = blockedCompanies.includes(company.name);
                                 const companyCategories = company.categories || (company.category ? [company.category] : ['None']);
-                                
-                                const getCategoryClassName = (category) => {
-                                    const classMap = { 'Developer Tools': 'category-developer-tools', 'Data Infrastructure': 'category-data-infrastructure', 'Cloud/Infrastructure': 'category-cloud-infrastructure', 'Enterprise Software': 'category-enterprise-software', 'Consumer Tech': 'category-consumer-tech', 'None': 'category-none' };
-                                    if (classMap[category]) return `category-pill ${classMap[category]}`;
-                                    let hash = 0; for (let i = 0; i < category.length; i++) { hash = ((hash << 5) - hash) + category.charCodeAt(i); hash = hash & hash; }
-                                    const colorIndex = Math.abs(hash) % 12; return `category-pill category-custom-${colorIndex}`;
-                                };
-                                
-                                const getCategoryStyle = (category) => {
-                                    if (categoryColors && categoryColors[category]) {
-                                        return { backgroundColor: categoryColors[category] + '20', color: categoryColors[category], border: `1px solid ${categoryColors[category]}` };
-                                    }
-                                    return {};
-                                };
 
                                 return (
                                     <tr key={company.name} style={isHidden ? { opacity: 0.6, background: 'var(--bg-tertiary)' } : {}}>
                                         <td><input type="checkbox" checked={selectedCompanies.includes(company.name)} onChange={() => handleToggleCompany(company.name)} style={{ cursor: 'pointer' }} onClick={(e) => e.stopPropagation()} /></td>
                                         <td><a href={company.url} target="_blank" rel="noopener noreferrer" className="link">{company.name}&nbsp;<span style={{ fontSize: '0.85em', marginLeft: '0.25rem' }}>↗</span></a></td>
                                         <td>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                                                {companyCategories.map(cat => (
-                                                    <span key={cat} className={getCategoryClassName(cat)} style={getCategoryStyle(cat)}>{cat}</span>
-                                                ))}
-                                            </div>
+                                            <window.CategoryList categories={companyCategories} categoryColors={categoryColors} />
                                         </td>
                                         <td><span style={{ fontSize: '0.875rem', fontWeight: company.fitLevel === 3 ? '600' : '400', opacity: company.fitLevel === 1 ? 0.7 : 1 }}>{window.getFitLevelLabel(company.fitLevel || null)}</span></td>
                                         <td>{jobs.filter(j => j.company === company.name).length > 0 ? (<button onClick={() => onViewCompanyJobs(company.name)} style={{ background: 'none', border: 'none', color: "var(--accent-primary)", cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit', padding: 0 }}>{jobs.filter(j => j.company === company.name).length}</button>) : (<span style={{ color: '#6b7280' }}>0</span>)}</td>
@@ -200,7 +182,7 @@ window.Companies = ({ companies, jobs, customCompanies, blockedCompanies, delete
                                                     <button className="icon-btn" onClick={() => { if (confirm(`Hide ${company.name} from this list?`)) { onDeleteCompany(company.name); } }} title="Hide company" style={{ background: "#374151", border: "1px solid #374151", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "white", fontSize: "1.1rem", marginRight: '0.5rem', verticalAlign: 'middle', opacity: 0.3 }}>💡</button>
                                                 </>
                                             )}
-                                            <button className="icon-btn" onClick={() => { setEditingCompany(company); setEditUrl(company.url); setEditCompanyName(company.name); setEditCategories(companyCategories); setEditNewCategory(''); setEditFitLevel(company.fitLevel || null); }} title="Edit company" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem", verticalAlign: 'middle' }}>✏️</button>
+                                            <button className="icon-btn" onClick={() => { setEditingCompany(company); setEditUrl(company.url); setEditCompanyName(company.name); setEditCategories(companyCategories); setEditFitLevel(company.fitLevel || null); }} title="Edit company" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem", verticalAlign: 'middle' }}>✏️</button>
                                             <button className="icon-btn danger" onClick={() => onRemoveCompany(company.name)} title="Delete company" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem", marginLeft: '0.5rem', verticalAlign: 'middle' }}>🗑️</button>
                                         </td>
                                     </tr>

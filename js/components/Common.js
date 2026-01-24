@@ -1,229 +1,3 @@
-window.ChartCard = ({ title, children }) => {
-    return (
-        <div className="chart-card">
-            <h3>{title}</h3>
-            <div className="chart-content">{children}</div>
-        </div>
-    );
-};
-
-window.DualLineChartComponent = ({ data, label1, label2, color1 = '#6b8aff', color2 = '#10b981', isPercentage = false }) => {
-    const { useEffect, useRef } = React;
-    const canvasRef = useRef(null);
-    const chartRef = useRef(null);
-    useEffect(() => {
-        if (!canvasRef.current) return;
-        if (chartRef.current) chartRef.current.destroy();
-        const ctx = canvasRef.current.getContext('2d');
-        chartRef.current = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.map(d => d.label),
-                datasets: [
-                    { label: label1, data: data.map(d => d.value1), borderColor: color1 + '60', backgroundColor: color1 + '10', tension: 0.4, fill: false, borderWidth: 2, pointRadius: 3, pointBackgroundColor: color1 + '60' },
-                    { label: label2, data: data.map(d => d.value2), borderColor: color2, backgroundColor: color2 + '20', tension: 0.4, fill: true, borderWidth: 3, pointRadius: 4, pointBackgroundColor: color2 }
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-                plugins: { legend: { labels: { color: '#9ca3af', usePointStyle: true, padding: 15 } }, tooltip: { callbacks: { label: function (context) { const value = context.parsed.y; return context.dataset.label + ': ' + value + (isPercentage ? '%' : ''); } } } },
-                scales: { y: { beginAtZero: true, max: isPercentage ? 100 : undefined, ticks: { color: '#9ca3af', stepSize: isPercentage ? undefined : 1, callback: (value) => value + (isPercentage ? '%' : '') }, grid: { color: '#2a3248' } }, x: { ticks: { color: '#9ca3af' }, grid: { color: '#2a3248' } } }
-            }
-        });
-        return () => { if (chartRef.current) chartRef.current.destroy(); };
-    }, [data, label1, label2, color1, color2, isPercentage]);
-    return <canvas ref={canvasRef} style={{ maxHeight: '300px' }}></canvas>;
-};
-
-window.TripleLineChartComponent = ({ data, label1, label2, label3, color1 = '#6b8aff', color2 = '#f59e0b', color3 = '#10b981', isPercentage = false, useDailyData = false }) => {
-    const { useEffect, useRef } = React;
-    const canvasRef = useRef(null);
-    const chartRef = useRef(null);
-    useEffect(() => {
-        if (!canvasRef.current) return;
-        const ctx = canvasRef.current.getContext('2d');
-        const labels = data.map(d => d.label);
-        const dataset1 = data.map(d => d.value1 ?? d.applications ?? 0);
-        const dataset2 = data.map(d => d.value2 ?? d.followUps ?? 0);
-        const dataset3 = data.map(d => d.value3 ?? d.responded ?? 0);
-        if (chartRef.current) chartRef.current.destroy();
-        const pointRadius = useDailyData ? 5 : 2;
-        const pointHoverRadius = useDailyData ? 7 : 3;
-        const maxValue = Math.max(...dataset1, ...dataset2, ...dataset3);
-        let stepSize;
-        if (maxValue <= 10) stepSize = 1; else if (maxValue <= 20) stepSize = 2; else if (maxValue <= 50) stepSize = 5; else if (maxValue <= 100) stepSize = 10; else stepSize = 20;
-        chartRef.current = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    { label: label1, data: dataset1, borderColor: color1, backgroundColor: color1 + '33', fill: false, tension: 0.2, pointRadius: pointRadius, pointHoverRadius: pointHoverRadius },
-                    { label: label2, data: dataset2, borderColor: color2, backgroundColor: color2 + '33', fill: false, tension: 0.2, pointRadius: pointRadius, pointHoverRadius: pointHoverRadius },
-                    { label: label3, data: dataset3, borderColor: color3, backgroundColor: color3 + '33', fill: false, tension: 0.2, pointRadius: pointRadius, pointHoverRadius: pointHoverRadius }
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, stacked: false,
-                plugins: { legend: { position: 'top' } },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: stepSize, callback: function (value) { return isPercentage ? value + '%' : value; } } } }
-            }
-        });
-        return () => { if (chartRef.current) chartRef.current.destroy(); };
-    }, [data, label1, label2, label3, color1, color2, color3, isPercentage, useDailyData]);
-    return <canvas ref={canvasRef} style={{ maxHeight: '200px' }}></canvas>;
-};
-
-window.LineChartComponent = ({ data, label, color = '#6b8aff' }) => {
-    const { useEffect, useRef } = React;
-    const canvasRef = useRef(null);
-    const chartRef = useRef(null);
-    useEffect(() => {
-        if (!canvasRef.current) return;
-        if (chartRef.current) chartRef.current.destroy();
-        const ctx = canvasRef.current.getContext('2d');
-        chartRef.current = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.map(d => d.label),
-                datasets: [{ label: label, data: data.map(d => d.value), borderColor: color, backgroundColor: color + '20', tension: 0.4, fill: true }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#9ca3af' } } },
-                scales: { y: { beginAtZero: true, ticks: { color: '#9ca3af' }, grid: { color: '#2a3248' } }, x: { ticks: { color: '#9ca3af' }, grid: { color: '#2a3248' } } }
-            }
-        });
-        return () => { if (chartRef.current) chartRef.current.destroy(); };
-    }, [data, label, color]);
-    return <canvas ref={canvasRef} style={{ maxHeight: '300px' }}></canvas>;
-};
-
-window.BarChartComponent = ({ data, color = '#6b8aff' }) => {
-    const { useEffect, useRef } = React;
-    const canvasRef = useRef(null);
-    const chartRef = useRef(null);
-    useEffect(() => {
-        if (!canvasRef.current) return;
-        if (chartRef.current) chartRef.current.destroy();
-        const ctx = canvasRef.current.getContext('2d');
-        chartRef.current = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.map(d => d.label),
-                datasets: [{ label: 'Count', data: data.map(d => d.value), backgroundColor: color, borderRadius: 4 }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { color: '#9ca3af', stepSize: 1 }, grid: { color: '#2a3248' } }, x: { ticks: { color: '#9ca3af' }, grid: { display: false } } }
-            }
-        });
-        return () => { if (chartRef.current) chartRef.current.destroy(); };
-    }, [data, color]);
-    return <canvas ref={canvasRef} style={{ maxHeight: '300px' }}></canvas>;
-};
-
-window.PieChartComponent = ({ data }) => {
-    const { useEffect, useRef } = React;
-    const canvasRef = useRef(null);
-    const chartRef = useRef(null);
-    useEffect(() => {
-        if (!canvasRef.current) return;
-        if (chartRef.current) chartRef.current.destroy();
-        const colors = ['#6b8aff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-        const ctx = canvasRef.current.getContext('2d');
-        chartRef.current = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: data.map(d => d.label),
-                datasets: [{ data: data.map(d => d.value), backgroundColor: colors.slice(0, data.length), borderWidth: 2, borderColor: '#0a0e1a' }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { position: 'right', labels: { color: '#9ca3af', padding: 15 } } }
-            }
-        });
-        return () => { if (chartRef.current) chartRef.current.destroy(); };
-    }, [data]);
-    return <canvas ref={canvasRef} style={{ maxHeight: '300px' }}></canvas>;
-};
-
-window.FunnelChartComponent = ({ data }) => {
-    const { useEffect, useRef } = React;
-    const containerRef = useRef(null);
-    useEffect(() => {
-        if (!containerRef.current || !data || data.length === 0) return;
-        const funnelOrder = ['Application', 'Recruiter Screen', 'Partial Loop', 'Full Loop', 'Offer'];
-        const sortedData = funnelOrder.map(stage => data.find(d => d.label === stage)).filter(item => item && item.value > 0);
-        if (sortedData.length === 0) return;
-        const totalValue = sortedData.reduce((sum, item) => sum + item.value, 0) || 1;
-        containerRef.current.innerHTML = '';
-        const colors = ['#6b8aff', '#8b5cf6', '#f59e0b', '#10b981', '#34d399'];
-        const funnel = document.createElement('div');
-        funnel.style.cssText = 'display: flex; flex-direction: column; gap: 20px; width: 100%; padding: 20px 0;';
-        sortedData.forEach((item, index) => {
-            const barWidthPercent = (item.value / totalValue) * 100;
-            const percent = ((item.value / totalValue) * 100).toFixed(1);
-            const row = document.createElement('div');
-            row.style.cssText = 'display: flex; align-items: center; gap: 16px;';
-            const circle = document.createElement('div');
-            const circleSize = Math.max(60, 80 - index * 8);
-            circle.style.cssText = `width: ${circleSize}px; height: ${circleSize}px; border-radius: 50%; background-color: ${colors[index % colors.length]}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 700; font-size: 18px; color: white;`;
-            circle.textContent = `${percent}%`;
-            const barSection = document.createElement('div');
-            barSection.style.cssText = 'flex: 1; display: flex; flex-direction: column; gap: 6px;';
-            const bar = document.createElement('div');
-            bar.style.cssText = `height: 32px; background-color: ${colors[index % colors.length]}; border-radius: 4px; width: ${Math.max(barWidthPercent, 15)}%; min-width: 60px; transition: all 0.2s; cursor: pointer;`;
-            bar.addEventListener('mouseenter', () => { bar.style.opacity = '0.8'; bar.style.transform = 'scaleX(1.05)'; bar.style.transformOrigin = 'left'; });
-            bar.addEventListener('mouseleave', () => { bar.style.opacity = '1'; bar.style.transform = 'scaleX(1)'; });
-            const labelCount = document.createElement('div');
-            labelCount.style.cssText = 'display: flex; gap: 8px; font-size: 12px; color: var(--text-tertiary);';
-            const label = document.createElement('span');
-            label.textContent = item.label;
-            label.style.cssText = 'font-weight: 600; color: var(--text-secondary);';
-            const count = document.createElement('span');
-            count.textContent = item.value.toLocaleString();
-            labelCount.appendChild(label);
-            labelCount.appendChild(count);
-            barSection.appendChild(bar);
-            barSection.appendChild(labelCount);
-            row.appendChild(circle);
-            row.appendChild(barSection);
-            funnel.appendChild(row);
-        });
-        containerRef.current.appendChild(funnel);
-    }, [data]);
-    return <div ref={containerRef} style={{ width: '100%', minHeight: '300px' }}></div>;
-};
-
-window.GroupedBarChartComponent = ({ data }) => {
-    const { useEffect, useRef } = React;
-    const canvasRef = useRef(null);
-    const chartRef = useRef(null);
-    useEffect(() => {
-        if (!canvasRef.current) return;
-        if (chartRef.current) chartRef.current.destroy();
-        const ctx = canvasRef.current.getContext('2d');
-        chartRef.current = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.labels,
-                datasets: [
-                    { label: 'Callback rate', data: data.responseRates, backgroundColor: '#6b8aff' },
-                    { label: 'Interview rate', data: data.interviewRates, backgroundColor: '#10b981' }
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#9ca3af' } } },
-                scales: { y: { beginAtZero: true, max: 100, ticks: { color: '#9ca3af', callback: (value) => value + '%' }, grid: { color: '#2a3248' } }, x: { ticks: { color: '#9ca3af' }, grid: { display: false } } }
-            }
-        });
-        return () => { if (chartRef.current) chartRef.current.destroy(); };
-    }, [data]);
-    return <canvas ref={canvasRef} style={{ maxHeight: '300px' }}></canvas>;
-};
-
 window.StatusBadge = ({ status }) => {
     if (!status) {
         console.warn("StatusBadge received undefined status");
@@ -289,6 +63,58 @@ window.FitLevelSelect = ({ value, onChange }) => {
     );
 };
 
+window.CategoryList = ({ categories, categoryColors }) => {
+    const { useState, useRef, useLayoutEffect } = React;
+    const [expanded, setExpanded] = useState(false);
+    const [showToggle, setShowToggle] = useState(false);
+    const containerRef = useRef(null);
+
+    const getCategoryClassName = (category) => {
+        const classMap = { 'Developer Tools': 'category-developer-tools', 'Data Infrastructure': 'category-data-infrastructure', 'Cloud/Infrastructure': 'category-cloud-infrastructure', 'Enterprise Software': 'category-enterprise-software', 'Consumer Tech': 'category-consumer-tech', 'None': 'category-none' };
+        if (classMap[category]) return `category-pill ${classMap[category]}`;
+        let hash = 0; for (let i = 0; i < category.length; i++) { hash = ((hash << 5) - hash) + category.charCodeAt(i); hash = hash & hash; }
+        const colorIndex = Math.abs(hash) % 12; return `category-pill category-custom-${colorIndex}`;
+    };
+    
+    const getCategoryStyle = (category) => {
+        if (categoryColors && categoryColors[category]) {
+            return { backgroundColor: categoryColors[category] + '20', color: categoryColors[category], border: `1px solid ${categoryColors[category]}` };
+        }
+        return {};
+    };
+
+    useLayoutEffect(() => {
+        if (containerRef.current) {
+            if (containerRef.current.scrollHeight > containerRef.current.clientHeight) {
+                setShowToggle(true);
+            } else if (!expanded) {
+                setShowToggle(false);
+            }
+        }
+    }, [categories, expanded]);
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+            <div 
+                ref={containerRef}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', maxHeight: expanded ? 'none' : '60px', overflow: 'hidden', width: '100%', transition: 'max-height 0.3s ease' }}
+            >
+                {categories.map(cat => (
+                    <span key={cat} className={getCategoryClassName(cat)} style={getCategoryStyle(cat)}>{cat}</span>
+                ))}
+            </div>
+            {(showToggle || expanded) && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.75rem', cursor: 'pointer', padding: '0.25rem 0', marginTop: '0.1rem', textDecoration: 'underline' }}
+                >
+                    {expanded ? 'Show less' : 'Show more'}
+                </button>
+            )}
+        </div>
+    );
+};
+
 window.CategorySelector = ({ 
     allCategories, 
     selectedCategories, 
@@ -297,9 +123,22 @@ window.CategorySelector = ({
     onAddCategory,
     onClear
 }) => {
-    const { useState } = React;
+    const { useState, useRef, useLayoutEffect } = React;
     const [newCategory, setNewCategory] = useState('');
     const [newCategoryColor, setNewCategoryColor] = useState('#3b82f6');
+    const [expanded, setExpanded] = useState(false);
+    const [showToggle, setShowToggle] = useState(false);
+    const containerRef = useRef(null);
+
+    useLayoutEffect(() => {
+        if (containerRef.current) {
+            if (containerRef.current.scrollHeight > containerRef.current.clientHeight) {
+                setShowToggle(true);
+            } else if (!expanded) {
+                setShowToggle(false);
+            }
+        }
+    }, [allCategories, expanded]);
 
     const handleAdd = () => {
         if (!newCategory.trim()) return;
@@ -314,7 +153,10 @@ window.CategorySelector = ({
                 <label style={{ marginBottom: 0 }}>Categories</label>
                 {onClear && <button type="button" onClick={onClear} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <div 
+                ref={containerRef}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem', maxHeight: expanded ? 'none' : '85px', overflow: 'hidden', transition: 'max-height 0.3s ease' }}
+            >
                 {allCategories.map(cat => {
                     const isSelected = selectedCategories.includes(cat);
                     const color = categoryColors && categoryColors[cat] ? categoryColors[cat] : 'var(--accent-primary)';
@@ -335,6 +177,15 @@ window.CategorySelector = ({
                     );
                 })}
             </div>
+            {(showToggle || expanded) && (
+                <button 
+                    type="button"
+                    onClick={() => setExpanded(!expanded)}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.8rem', cursor: 'pointer', padding: '0 0 0.5rem 0', textDecoration: 'underline', display: 'block' }}
+                >
+                    {expanded ? 'Show less' : 'Show more'}
+                </button>
+            )}
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Or create new category..." style={{ flex: 1 }} />
                 {newCategory && <input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} style={{ width: '40px', height: '40px', padding: 0, border: 'none', background: 'none' }} title="Choose category color" />}
