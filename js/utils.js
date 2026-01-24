@@ -184,7 +184,21 @@ window.SecurityUtil = {
             resumeUrl: job.resumeUrl ? this.validateURL(job.resumeUrl) : '',
             coverLetterUrl: job.coverLetterUrl ? this.validateURL(job.coverLetterUrl) : '',
             fitLevel: job.fitLevel !== undefined ? this.validateFitLevel(job.fitLevel) : null,
-            categories: categories
+            categories: categories,
+            interviews: Array.isArray(job.interviews) ? job.interviews.map(i => ({
+                id: i.id || Date.now().toString(36) + Math.random().toString(36).substr(2),
+                type: this.sanitizeInput(i.type, 50),
+                date: i.date || '',
+                duration: parseInt(i.duration) || 0,
+                interviewers: Array.isArray(i.interviewers) ? i.interviewers.map(iv => ({
+                    name: this.sanitizeInput(iv.name, 100),
+                    title: this.sanitizeInput(iv.title, 100),
+                    email: this.sanitizeInput(iv.email, 100),
+                    linkedin: iv.linkedin ? this.validateURL(iv.linkedin) : ''
+                })) : (typeof i.interviewers === 'string' && i.interviewers ? [{ name: this.sanitizeInput(i.interviewers, 100), title: '', email: '', linkedin: '' }] : []),
+                notes: this.sanitizeInput(i.notes, 2000),
+                round: parseInt(i.round) || 1
+            })) : []
         };
         const dataSize = JSON.stringify(validated).length;
         if (dataSize > 50000) throw new Error('Job data exceeds maximum size');

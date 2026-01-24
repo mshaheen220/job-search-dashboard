@@ -493,6 +493,7 @@ function App() {
                     requestSort={requestSort}
                     getSortIcon={getSortIcon}
                 />}
+                {view === "interviews" && <window.Interviews jobs={jobs} onEditJob={(job) => { setEditingJob(job); setShowModal(true); }} />}
                 {view === "stats" && <window.Stats jobs={jobs} />}
             </main>
             {showModal && (

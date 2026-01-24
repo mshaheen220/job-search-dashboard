@@ -48,6 +48,7 @@ window.Header = ({ view, setView, onBackup, onImport, lastBackupTime, theme, tog
                             <button className={`nav-btn ${view === "dashboard" ? "active" : ""}`} onClick={() => handleNavClick(() => setView("dashboard"))}>Dashboard</button>
                             <button className={`nav-btn ${view === "companies" ? "active" : ""}`} onClick={() => handleNavClick(() => setView("companies"))}>Companies</button>
                             <button className={`nav-btn ${view === "jobs" ? "active" : ""}`} onClick={() => handleNavClick(() => setView("jobs"))}>Applications</button>
+                            <button className={`nav-btn ${view === "interviews" ? "active" : ""}`} onClick={() => handleNavClick(() => setView("interviews"))}>Interviews</button>
                             <button className="nav-btn" onClick={() => handleNavClick(onBackup)} style={{ borderColor: backupWarning ? "var(--warning)" : undefined, background: backupWarning ? (theme === 'dark' ? '#7c2d12' : '#faa29d') : undefined, color: backupWarning ? (theme === 'dark' ? '#fed7aa' : 'var(--text-primary)') : undefined }} title={lastBackupTime ? `Last backup: ${lastBackupTime.toLocaleDateString()}` : "No backup yet"}>💾 Back up {backupWarning && "⚠️"}</button>
                             <button className="nav-btn" onClick={() => handleNavClick(onImport)}>📥 Import</button>
                         </nav>

@@ -10,14 +10,98 @@ const BaseModal = ({ title, onClose, children, maxWidth }) => (
 const Input = ({ label, type = "text", ...p }) => <div className="form-group"><label>{label}</label><input type={type} {...p} /></div>;
 const Select = ({ label, children, ...p }) => <div className="form-group"><label>{label}</label><select {...p}>{children}</select></div>;
 
+const InterviewManager = ({ interviews, onChange }) => {
+    const { useState } = React;
+    const [isAdding, setIsAdding] = useState(false);
+    const [newInterview, setNewInterview] = useState({ type: 'Recruiter Screen', date: '', duration: 30, interviewers: [], notes: '' });
+    const [tempInterviewer, setTempInterviewer] = useState({ name: '', title: '', email: '', linkedin: '' });
+
+    const handleAdd = () => {
+        onChange([...interviews, { ...newInterview, id: Date.now().toString(36) + Math.random().toString(36).substr(2) }]);
+        setIsAdding(false);
+        setNewInterview({ type: 'Recruiter Screen', date: '', duration: 30, interviewers: [], notes: '' });
+        setTempInterviewer({ name: '', title: '', email: '', linkedin: '' });
+    };
+
+    const addInterviewer = () => {
+        if (!tempInterviewer.name.trim()) return;
+        setNewInterview(prev => ({ ...prev, interviewers: [...prev.interviewers, tempInterviewer] }));
+        setTempInterviewer({ name: '', title: '', email: '', linkedin: '' });
+    };
+
+    const handleDelete = (id) => {
+        onChange(interviews.filter(i => i.id !== id));
+    };
+
+    return (
+        <div className="form-group" style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <label style={{ marginBottom: 0 }}>Interviews ({interviews.length})</label>
+                {!isAdding && <button type="button" onClick={() => setIsAdding(true)} style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500' }}>+ Add Round</button>}
+            </div>
+            
+            {interviews.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: isAdding ? '1rem' : 0 }}>
+                    {interviews.sort((a, b) => new Date(a.date) - new Date(b.date)).map((interview, idx) => (
+                        <div key={interview.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
+                            <div>
+                                <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>{interview.type}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{interview.date ? new Date(interview.date).toLocaleString() : 'No date'} · {interview.duration}m</div>
+                                {interview.interviewers && interview.interviewers.length > 0 && (
+                                    <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                                        {interview.interviewers.map((iv, i) => (
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                <span>👤 {iv.name}</span>
+                                                {iv.title && <span style={{ color: 'var(--text-tertiary)' }}>- {iv.title}</span>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <button type="button" onClick={() => handleDelete(interview.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}>×</button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {isAdding && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px dashed var(--accent-primary)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}><select value={newInterview.type} onChange={e => setNewInterview({...newInterview, type: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}><option>Recruiter Screen</option><option>Technical Screen</option><option>Hiring Manager</option><option>System Design</option><option>Coding Round</option><option>Behavioral</option><option>Final Round</option></select><input type="datetime-local" value={newInterview.date} onChange={e => setNewInterview({...newInterview, date: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.5rem' }}><input type="number" placeholder="Mins" value={newInterview.duration} onChange={e => setNewInterview({...newInterview, duration: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} /></div>
+                    
+                    <div style={{ background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-primary)' }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem' }}>Interviewers</div>
+                        {newInterview.interviewers.map((iv, idx) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem', padding: '0.25rem', background: 'var(--bg-tertiary)', borderRadius: '4px' }}>
+                                <span>{iv.name} {iv.title && `(${iv.title})`}</span>
+                                <button type="button" onClick={() => setNewInterview(prev => ({ ...prev, interviewers: prev.interviewers.filter((_, i) => i !== idx) }))} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>×</button>
+                            </div>
+                        ))}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <input type="text" placeholder="Name" value={tempInterviewer.name} onChange={e => setTempInterviewer({...tempInterviewer, name: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
+                            <input type="text" placeholder="Title" value={tempInterviewer.title} onChange={e => setTempInterviewer({...tempInterviewer, title: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
+                            <input type="email" placeholder="Email" value={tempInterviewer.email} onChange={e => setTempInterviewer({...tempInterviewer, email: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
+                            <input type="url" placeholder="LinkedIn URL" value={tempInterviewer.linkedin} onChange={e => setTempInterviewer({...tempInterviewer, linkedin: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
+                        </div>
+                        <button type="button" onClick={addInterviewer} disabled={!tempInterviewer.name} style={{ width: '100%', padding: '0.3rem', background: 'var(--bg-hover)', border: '1px solid var(--border-primary)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>+ Add Interviewer</button>
+                    </div>
+
+                    <textarea placeholder="Notes / Focus areas" value={newInterview.notes} onChange={e => setNewInterview({...newInterview, notes: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', minHeight: '60px' }} />
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}><button type="button" onClick={() => setIsAdding(false)} className="btn btn-sm btn-secondary">Cancel</button><button type="button" onClick={handleAdd} className="btn btn-sm">Add</button></div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, companyCategories }) => {
     const { useState, useMemo } = React;
     const [newCategoryColors, setNewCategoryColors] = useState({});
     const [formData, setFormData] = useState(() => {
         const today = new Date().toISOString().split('T')[0];
-        const defaults = { company: "", role: "", url: "", status: "Applied", priority: "Tier 2", salary: "", location: "", contact: "", notes: "", followUp: "", dateApplied: today, closeReason: "", progression: "Application", resumeUrl: "", coverLetterUrl: "", fitLevel: null, categories: [] };
+        const defaults = { company: "", role: "", url: "", status: "Applied", priority: "Tier 2", salary: "", location: "", contact: "", notes: "", followUp: "", dateApplied: today, closeReason: "", progression: "Application", resumeUrl: "", coverLetterUrl: "", fitLevel: null, categories: [], interviews: [] };
         const categories = job?.categories?.length ? job.categories : (companyCategories || []);
-        return job ? { ...defaults, ...job, categories, status: job.status || "Applied", priority: job.priority || "Tier 2", progression: job.progression || "Application", dateApplied: job.dateApplied || today, fitLevel: job.fitLevel || null } : defaults;
+        return job ? { ...defaults, ...job, categories, status: job.status || "Applied", priority: job.priority || "Tier 2", progression: job.progression || "Application", dateApplied: job.dateApplied || today, fitLevel: job.fitLevel || null, interviews: job.interviews || [] } : defaults;
     });
 
     const toggleCategory = (cat) => setFormData(prev => ({ ...prev, categories: prev.categories.includes(cat) ? prev.categories.filter(c => c !== cat) : [...prev.categories, cat] }));
@@ -58,6 +142,7 @@ window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, c
                         <Select label="Priority" value={formData.priority} onChange={update('priority')}>{window.PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}</Select>
                     </div>
                     <div className="form-row"><div className="form-group"><label>Fit Level</label><window.FitLevelSelect value={formData.fitLevel} onChange={(val) => setFormData(prev => ({ ...prev, fitLevel: val }))} /></div></div>
+                    <InterviewManager interviews={formData.interviews} onChange={(newInterviews) => setFormData(prev => ({ ...prev, interviews: newInterviews }))} />
                     {formData.status === "Closed" && (
                         <div className="form-row">
                             <Select label="Close reason *" required value={formData.closeReason || ""} onChange={update('closeReason')}><option value="">Select a reason...</option>{Object.values(window.CLOSE_REASONS).map(r => <option key={r} value={r}>{r}</option>)}</Select>
