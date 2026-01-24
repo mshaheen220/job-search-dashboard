@@ -1121,3 +1121,23 @@ body {
 .category-pill-clickable:hover {
     opacity: 0.8;
 }
+
+.tooltip-popup {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    pointer-events: none;
+    animation: fadeIn 0.2s ease;
+    font-weight: 500;
+}

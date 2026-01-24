@@ -115,6 +115,43 @@ window.CategoryList = ({ categories, categoryColors }) => {
     );
 };
 
+window.Tooltip = ({ text, children, style }) => {
+    const [show, setShow] = React.useState(false);
+    const [coords, setCoords] = React.useState({ top: 0, left: 0 });
+    const wrapperRef = React.useRef(null);
+
+    const handleMouseEnter = () => {
+        if (wrapperRef.current) {
+            const rect = wrapperRef.current.getBoundingClientRect();
+            setCoords({ top: rect.top - 8, left: rect.left + (rect.width / 2) });
+            setShow(true);
+        }
+    };
+
+    // Clone the child element to add aria-label for accessibility (replaces title attribute functionality)
+    const childWithAria = React.isValidElement(children) 
+        ? React.cloneElement(children, { 'aria-label': text }) 
+        : children;
+
+    return (
+        <div 
+            ref={wrapperRef}
+            className="tooltip-wrapper"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={() => setShow(false)}
+            style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', ...style }}
+        >
+            {childWithAria}
+            {show && text && ReactDOM.createPortal(
+                <div className="tooltip-popup" style={{ position: 'fixed', top: coords.top, left: coords.left, transform: 'translate(-50%, -100%)', margin: 0, bottom: 'auto', zIndex: 10000 }}>
+                    {text}
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+};
+
 window.CategorySelector = ({ 
     allCategories, 
     selectedCategories, 
@@ -188,7 +225,7 @@ window.CategorySelector = ({
             )}
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Or create new category..." style={{ flex: 1 }} />
-                {newCategory && <input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} style={{ width: '40px', height: '40px', padding: 0, border: 'none', background: 'none' }} title="Choose category color" />}
+                {newCategory && <window.Tooltip text="Choose category color"><input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} style={{ width: '40px', height: '40px', padding: 0, border: 'none', background: 'none' }} /></window.Tooltip>}
                 <button type="button" onClick={handleAdd} className="btn btn-sm" disabled={!newCategory.trim()}>Add</button>
             </div>
         </div>

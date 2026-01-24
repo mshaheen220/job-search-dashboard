@@ -82,7 +82,7 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
         
         if (className === 'status-dot') return <span className="status-dot" style={{ backgroundColor: 'transparent' }} />;
 
-        return <span className={className} title={title} />;
+        return <window.Tooltip text={title}><span className={className} /></window.Tooltip>;
     };
 
     const handleAddCategory = (name, color) => { 
@@ -208,9 +208,9 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
                                         {visibleColumns.coverLetterUrl && (<td>{job.coverLetterUrl ? (<a href={job.coverLetterUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)", textDecoration: "none" }}>📝&nbsp;View</a>) : "-"}</td>)}
                                         <td>
                                             <div style={{ display: "flex", gap: "0.5rem" }}>
-                                                <button className="icon-btn" onClick={() => onEdit(job)} title="Edit" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem" }}>✏️</button>
-                                                <button className="icon-btn" onClick={() => handleQuickClose(job)} title="Close as rejected today" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem" }}>🚫</button>
-                                                <button className="icon-btn danger" onClick={() => onDelete(job.id)} title="Delete" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem" }}>🗑️</button>
+                                            <window.Tooltip text="Edit"><button className="icon-btn" onClick={() => onEdit(job)} style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem" }}>✏️</button></window.Tooltip>
+                                            <window.Tooltip text="Close as rejected today"><button className="icon-btn" onClick={() => handleQuickClose(job)} style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem" }}>🚫</button></window.Tooltip>
+                                            <window.Tooltip text="Delete"><button className="icon-btn danger" onClick={() => onDelete(job.id)} style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", color: "var(--text-secondary)", fontSize: "0.9rem" }}>🗑️</button></window.Tooltip>
                                             </div>
                                         </td>
                                     </tr>
@@ -235,7 +235,7 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
                         <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h2>Application details</h2>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                {viewModalEdit ? (<button className="btn" onClick={() => { onUpdateJob(editedJobData); setViewModalOpen(false); setViewModalEdit(false); setEditedJobData(null); }}>Save & close</button>) : (<button className="icon-btn" title="Edit" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '1.1rem' }} onClick={() => { if (!viewModalEdit) { setEditedJobData({ ...viewModalJob }); } setViewModalEdit(true); }}><span role="img" aria-label="Edit">✏️</span></button>)}
+                                {viewModalEdit ? (<button className="btn" onClick={() => { onUpdateJob(editedJobData); setViewModalOpen(false); setViewModalEdit(false); setEditedJobData(null); }}>Save & close</button>) : (<window.Tooltip text="Edit"><button className="icon-btn" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '1.1rem' }} onClick={() => { if (!viewModalEdit) { setEditedJobData({ ...viewModalJob }); } setViewModalEdit(true); }}><span role="img" aria-label="Edit">✏️</span></button></window.Tooltip>)}
                                 <button className="modal-close" onClick={() => setViewModalOpen(false)}>×</button>
                             </div>
                         </div>
