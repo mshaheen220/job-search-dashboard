@@ -102,6 +102,14 @@ window.getFitLevelLabel = window.FitLevelUtil.getLabel;
 window.getFitLevelValue = window.FitLevelUtil.getValue;
 window.sortByFitLevel = window.FitLevelUtil.compare;
 
+window.getFormatIcon = (format) => {
+    if (!format) return '❓';
+    if (format === window.INTERVIEW_FORMATS.IN_PERSON) return '👨‍💼';
+    if (format === window.INTERVIEW_FORMATS.PHONE) return '☎️';
+    if ([window.INTERVIEW_FORMATS.VIDEO_ZOOM, window.INTERVIEW_FORMATS.VIDEO_TEAMS, window.INTERVIEW_FORMATS.VIDEO_MEET, window.INTERVIEW_FORMATS.VIDEO_OTHER, 'Video Call', 'Other Video Call'].includes(format)) return '📹';
+    return '❓';
+};
+
 window.SecurityUtil = {
     CONFIG: {
         MAX_STRING_LENGTH: 10000,

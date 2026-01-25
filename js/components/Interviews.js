@@ -45,14 +45,6 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
     // For upcoming view, show upcoming + unscheduled (TBD). For past, just show past.
     const displayList = viewType === 'upcoming' ? [...upcomingInterviews, ...unscheduledInterviews] : pastInterviews;
 
-    const getFormatIcon = (format) => {
-        if (!format) return '❓';
-        if (format === window.INTERVIEW_FORMATS.IN_PERSON) return '👨‍💼';
-        if (format === window.INTERVIEW_FORMATS.PHONE) return '☎️';
-        if ([window.INTERVIEW_FORMATS.VIDEO_ZOOM, window.INTERVIEW_FORMATS.VIDEO_TEAMS, window.INTERVIEW_FORMATS.VIDEO_MEET, window.INTERVIEW_FORMATS.VIDEO_OTHER, 'Video Call', 'Other Video Call'].includes(format)) return '📹';
-        return '❓';
-    };
-
     const getSentimentIcon = (sentiment) => {
         if (!sentiment) return null;
         const s = sentiment.toLowerCase();
@@ -102,7 +94,7 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start' }}>
                                 <div>
                                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <window.Tooltip text={interview.format || 'Video Call'}><span style={{ cursor: 'help', fontSize: '1.1em' }}>{getFormatIcon(interview.format)}</span></window.Tooltip>
+                                        <window.Tooltip text={interview.format || 'Video Call'}><span style={{ cursor: 'help', fontSize: '1.1em' }}>{window.getFormatIcon(interview.format)}</span></window.Tooltip>
                                         {interview.date ? new Date(interview.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBD'}
                                     </div>
                                     <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--accent-primary)' }}>{interview.type}</h3>

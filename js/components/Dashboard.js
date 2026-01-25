@@ -82,14 +82,6 @@ window.UpcomingInterviews = ({ jobs, onEditJob }) => {
 
     if (upcoming.length === 0) return null;
 
-    const getFormatIcon = (format) => {
-        if (!format) return '❓';
-        if (format === window.INTERVIEW_FORMATS.IN_PERSON) return '👨‍💼';
-        if (format === window.INTERVIEW_FORMATS.PHONE) return '☎️';
-        if ([window.INTERVIEW_FORMATS.VIDEO_ZOOM, window.INTERVIEW_FORMATS.VIDEO_TEAMS, window.INTERVIEW_FORMATS.VIDEO_MEET, window.INTERVIEW_FORMATS.VIDEO_OTHER, 'Video Call', 'Other Video Call'].includes(format)) return '📹';
-        return '❓';
-    };
-
     return (
         <div className="stat-card" style={{ marginBottom: '2rem' }}>
             <h3 style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: '600' }}>Upcoming Interviews</h3>
@@ -99,7 +91,7 @@ window.UpcomingInterviews = ({ jobs, onEditJob }) => {
                     <tbody>
                         {upcoming.map(i => (
                             <tr key={i.id}>
-                                <td><window.Tooltip text={i.format || 'Video Call'}><span style={{ cursor: 'help', fontSize: '1.2em' }}>{getFormatIcon(i.format)}</span></window.Tooltip></td>
+                                <td><window.Tooltip text={i.format || 'Video Call'}><span style={{ cursor: 'help', fontSize: '1.2em' }}>{window.getFormatIcon(i.format)}</span></window.Tooltip></td>
                                 <td><button onClick={() => onEditJob(jobs.find(j => j.id === i.jobId), i.id)} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 'inherit', textAlign: 'left' }}>{new Date(i.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</button></td>
                                 <td>{new Date(i.date).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</td>
                                 <td><strong>{i.company}</strong></td>

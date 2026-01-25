@@ -434,6 +434,7 @@ function App() {
             return sortedJobs.filter(job => {
                 if (filters.status !== "all" && job.status !== filters.status) return false;
                 if (filters.priority !== "all" && job.priority !== filters.priority) return false;
+                if (filters.company && job.company !== filters.company) return false;
                 if (filters.search) {
                     const searchLower = filters.search.toLowerCase();
                     const matchesRole = job.role.toLowerCase().includes(searchLower);
@@ -480,7 +481,7 @@ function App() {
                     onUnhideCompany={(companyName) => { setBlockedCompanies(prev => prev.filter(name => name !== companyName)); }}
                     onAddJob={(company) => { setEditingJob({ company: company.name, url: company.url }); setShowModal(true); }}
                     onAddCompany={() => setShowCompanyModal(true)}
-                    onViewCompanyJobs={(companyName) => { setView('jobs'); setFilters({ ...filters, search: companyName }); }}
+                    onViewCompanyJobs={(companyName) => { setView('jobs'); setFilters({ ...filters, company: companyName, search: '' }); }}
                 />}
                 {view === "jobs" && <window.JobsTable
                     jobs={filteredJobs}

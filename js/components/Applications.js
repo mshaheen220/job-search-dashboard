@@ -44,8 +44,8 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
     const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
-    useEffect(() => { setCurrentPage(1); }, [filters.search, selectedStatuses.length, selectedPriorities.length, selectedFitLevels.length, dateRangeFilter]);
-    const activeFiltersCount = [filters.search, selectedStatuses.length > 0, selectedPriorities.length > 0, selectedFitLevels.length > 0, dateRangeFilter.start || dateRangeFilter.end].filter(Boolean).length;
+    useEffect(() => { setCurrentPage(1); }, [filters.search, filters.company, selectedStatuses.length, selectedPriorities.length, selectedFitLevels.length, dateRangeFilter]);
+    const activeFiltersCount = [filters.search, filters.company, selectedStatuses.length > 0, selectedPriorities.length > 0, selectedFitLevels.length > 0, dateRangeFilter.start || dateRangeFilter.end].filter(Boolean).length;
     const clearFilters = () => { setFilters({ status: 'all', priority: 'all', company: '', search: '' }); setSelectedStatuses([]); setSelectedPriorities([]); setSelectedFitLevels([]); setDateRangeFilter({ start: '', end: '' }); };
     const handleQuickClose = (job) => {
         const today = new Date().toISOString().split('T')[0];
@@ -111,6 +111,12 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
                 <div className="filters-section" data-filter-group="applications-filters" style={{ flex: 1 }}>
                     <div className="filters-row" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
                         <div className="search-container"><input type="text" className="search-input" placeholder="Search applications by role or company" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />{filters.search && (<button className="clear-search" onClick={() => setFilters({ ...filters, search: "" })}>×</button>)}</div>
+                        {filters.company && (
+                            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-tertiary)', padding: '0.4rem 0.8rem', borderRadius: '20px', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)', fontSize: '0.9rem' }}>
+                                <span>Company: <strong>{filters.company}</strong></span>
+                                <button onClick={() => setFilters({ ...filters, company: '' })} style={{ background: 'none', border: 'none', marginLeft: '0.5rem', cursor: 'pointer', color: 'var(--accent-primary)', fontSize: '1.1rem', display: 'flex', alignItems: 'center' }}>×</button>
+                            </div>
+                        )}
                         <div style={{ position: "relative" }}>
                             <button className="filter-select" onClick={() => setShowStatusDropdown(!showStatusDropdown)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", minWidth: "160px", cursor: "pointer" }}><span>{selectedStatuses.length === 0 ? 'All statuses' : `Status (${selectedStatuses.length})`}</span><span style={{ fontSize: "0.7rem" }}>▼</span></button>
                             {showStatusDropdown && (
@@ -139,7 +145,7 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
                             )}
                         </div>)}
                         <button className={`advanced-filters-toggle ${showAdvancedFilters ? 'active' : ''}`} onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} style={{ background: showAdvancedFilters ? "var(--accent-primary)" : "var(--bg-tertiary)", color: showAdvancedFilters ? "white" : "var(--text-secondary)", border: "1px solid var(--border-primary)", padding: "0.6rem 1rem", borderRadius: "10px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "500", display: "flex", alignItems: "center", gap: "0.5rem", transition: "all 0.2s ease" }}>📅 Application date {activeFiltersCount > 0 && ` (${activeFiltersCount})`}</button>
-                        {(filters.search || selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedFitLevels.length > 0 || dateRangeFilter.start || dateRangeFilter.end) && (<button onClick={clearFilters} style={{ background: "transparent", color: "var(--accent-primary)", border: "none", padding: "0.6rem 0.75rem", borderRadius: "10px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "500", transition: "all 0.2s ease", whiteSpace: "nowrap" }}>Clear all</button>)}
+                        {(filters.search || filters.company || selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedFitLevels.length > 0 || dateRangeFilter.start || dateRangeFilter.end) && (<button onClick={clearFilters} style={{ background: "transparent", color: "var(--accent-primary)", border: "none", padding: "0.6rem 0.75rem", borderRadius: "10px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "500", transition: "all 0.2s ease", whiteSpace: "nowrap" }}>Clear all</button>)}
                     </div>
                 </div>
                 <button className="btn btn-secondary" onClick={() => setShowColumnSelector(!showColumnSelector)}>⚙️ Columns</button>
