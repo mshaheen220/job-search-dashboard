@@ -1,4 +1,4 @@
-window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
+window.Interviews = ({ jobs, onEditJob, initialCompany, highlightInterviewId }) => {
     const { useState, useMemo, useEffect } = React;
     const [viewType, setViewType] = useState('upcoming'); // upcoming, past
     const [selectedCompany, setSelectedCompany] = useState(initialCompany || '');
@@ -6,6 +6,31 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
     useEffect(() => {
         setSelectedCompany(initialCompany || '');
     }, [initialCompany]);
+
+    useEffect(() => {
+        if (highlightInterviewId) {
+            const interview = interviews.find(i => i.id === highlightInterviewId);
+            if (interview) {
+                const isPast = interview.date && new Date(interview.date) < new Date();
+                if (isPast && viewType !== 'past') setViewType('past');
+                else if (!isPast && viewType !== 'upcoming') setViewType('upcoming');
+            }
+        }
+    }, [highlightInterviewId, interviews]);
+
+    useEffect(() => {
+        if (highlightInterviewId) {
+            setTimeout(() => {
+                const el = document.getElementById(`interview-${highlightInterviewId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.remove('highlight-pulse');
+                    void el.offsetWidth; // trigger reflow
+                    el.classList.add('highlight-pulse');
+                }
+            }, 300);
+        }
+    }, [highlightInterviewId, displayList]);
 
     const interviews = useMemo(() => {
         const list = [];
@@ -96,7 +121,7 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
                         const isPhone = interview.connectionDetails && /^[+\d\s\-().]+$/.test(interview.connectionDetails) && (interview.connectionDetails.match(/\d/g) || []).length >= 7;
 
                         return (
-                        <div key={interview.id} className={`stat-card interview-card${dateClass}`}>
+                        <div key={interview.id} id={`interview-${interview.id}`} className={`stat-card interview-card${dateClass}`}>
                             <div className="interview-card-header">
                                 <div>
                                     <div className="interview-meta">

@@ -208,6 +208,74 @@ window.JobModal = ({ job, onSave, onClose, existingCategories, categoryColors, c
     );
 };
 
+window.JobDetailsModal = ({ job, onClose, onUpdateJob, onViewInterviews }) => {
+    const { useState, useRef, useEffect } = React;
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedJobData, setEditedJobData] = useState(null);
+    const notesTextareaRef = useRef(null);
+
+    const autoExpandTextarea = () => { 
+        if (notesTextareaRef.current) { 
+            notesTextareaRef.current.style.height = 'auto'; 
+            notesTextareaRef.current.style.height = Math.max(notesTextareaRef.current.scrollHeight, 120) + 'px'; 
+        } 
+    };
+
+    useEffect(() => { autoExpandTextarea(); }, [job, editedJobData, isEditing]);
+
+    const handleSave = () => {
+        onUpdateJob(editedJobData);
+        setIsEditing(false);
+        setEditedJobData(null);
+    };
+
+    const startEditing = () => {
+        setEditedJobData({ ...job });
+        setIsEditing(true);
+    };
+
+    const currentJob = isEditing ? editedJobData : job;
+    const update = (field) => (e) => setEditedJobData(prev => ({ ...prev, [field]: e.target.value }));
+
+    return (
+        <BaseModal title="Application details" onClose={onClose} maxWidth="700px">
+            <div className="modal-header" style={{ display: 'none' }}></div> {/* Hidden because BaseModal has header, but we want custom controls in body or we use BaseModal's header? BaseModal has header. We can inject buttons there? BaseModal doesn't support custom header actions easily. Let's use the pattern from Applications.js but adapted for BaseModal structure or just put actions in body top? Actually BaseModal renders title and close. We can put the edit button in the body top right absolutely positioned or just below header. Let's stick to the previous layout by putting controls in the body if needed or just use the footer. The previous layout had edit button in header. BaseModal doesn't support that. Let's just put the edit button in the top of the body. */}
+            
+            <div className="modal-body">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                    {isEditing ? (<button className="btn btn-sm" onClick={handleSave}>Save & close</button>) : (<window.Tooltip text="Edit"><button className="icon-btn" onClick={startEditing}>✏️</button></window.Tooltip>)}
+                </div>
+                <div className="job-details-header">
+                    <h3 className="job-details-title">{currentJob.role} @ {currentJob.company}</h3>
+                    <div className="form-row">
+                        <div className="form-group"><label>Company</label><input type="text" value={currentJob.company || ''} readOnly={!isEditing} onChange={update('company')} className={isEditing ? '' : 'view-field'} /></div>
+                        <div className="form-group"><label>Role</label><input type="text" value={currentJob.role || ''} readOnly={!isEditing} onChange={update('role')} className={isEditing ? '' : 'view-field'} /></div>
+                    </div>
+                    <div className="form-group"><label>Job URL</label>{isEditing ? (<input type="url" value={currentJob.url || ''} onChange={update('url')} />) : (currentJob.url ? (<div className="view-field job-url-display"><a href={currentJob.url} target="_blank" rel="noopener noreferrer" className="link" onClick={(e) => e.stopPropagation()}>{currentJob.url}</a></div>) : (<div className="view-field">-</div>))}</div>
+                    <div className="form-row">
+                        <div className="form-group"><label>Resume URL</label>{isEditing ? (<input type="url" value={currentJob.resumeUrl || ''} onChange={update('resumeUrl')} />) : (currentJob.resumeUrl ? (<div className="view-field job-url-display"><a href={currentJob.resumeUrl} target="_blank" rel="noopener noreferrer" className="link" onClick={(e) => e.stopPropagation()}>{currentJob.resumeUrl}</a></div>) : (<div className="view-field">-</div>))}</div>
+                        <div className="form-group"><label>Cover letter URL</label>{isEditing ? (<input type="url" value={currentJob.coverLetterUrl || ''} onChange={update('coverLetterUrl')} />) : (currentJob.coverLetterUrl ? (<div className="view-field job-url-display"><a href={currentJob.coverLetterUrl} target="_blank" rel="noopener noreferrer" className="link" onClick={(e) => e.stopPropagation()}>{currentJob.coverLetterUrl}</a></div>) : (<div className="view-field">-</div>))}</div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group"><label>Status</label><input type="text" value={currentJob.status || ''} readOnly={!isEditing} onChange={update('status')} className={isEditing ? '' : 'view-field'} /></div>
+                        <div className="form-group"><label>Date applied</label><input type="date" value={currentJob.dateApplied || ''} readOnly={!isEditing} onChange={update('dateApplied')} className={isEditing ? '' : 'view-field'} /></div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group"><label>Progression</label><input type="text" value={currentJob.progression || ''} readOnly={!isEditing} onChange={update('progression')} className={isEditing ? '' : 'view-field'} /></div>
+                        <div className="form-group"><label>Priority</label><input type="text" value={currentJob.priority || ''} readOnly={!isEditing} onChange={update('priority')} className={isEditing ? '' : 'view-field'} /></div>
+                    </div>
+                    {job.interviews && job.interviews.length > 0 && (<div className="form-group"><label>Interviews</label><div className="modal-interviews-summary"><span className="text-primary">{job.interviews.length} round{job.interviews.length !== 1 ? 's' : ''}</span><button onClick={() => { onClose(); onViewInterviews(job.company); }} className="btn-link">View details →</button></div></div>)}
+                    {(currentJob.closeReason || currentJob.followUp) && (<div className="form-row"><div className="form-group"><label>Close reason</label><input type="text" value={currentJob.closeReason || ''} readOnly={!isEditing} onChange={update('closeReason')} className={isEditing ? '' : 'view-field'} /></div><div className="form-group"><label>Close date</label><input type="date" value={currentJob.followUp || ''} readOnly={!isEditing} onChange={update('followUp')} className={isEditing ? '' : 'view-field'} /></div></div>)}
+                    <div className="form-row"><div className="form-group"><label>Salary</label><input type="text" value={currentJob.salary || ''} readOnly={!isEditing} onChange={update('salary')} className={isEditing ? '' : 'view-field'} /></div><div className="form-group"><label>Location</label><input type="text" value={currentJob.location || ''} readOnly={!isEditing} onChange={update('location')} className={isEditing ? '' : 'view-field'} /></div></div>
+                    <div className="form-group"><label>Contact name</label><input type="text" value={currentJob.contact || ''} readOnly={!isEditing} onChange={update('contact')} className={isEditing ? '' : 'view-field'} /></div>
+                    <div className="form-group"><label>Notes</label>{isEditing ? (<textarea value={currentJob.notes || ''} onChange={update('notes')} ref={notesTextareaRef} className="notes-edit" />) : (<div className="view-field notes-view" dangerouslySetInnerHTML={{ __html: currentJob.notes ? window.UIUtil.linkify(currentJob.notes) : '-' }}></div>)}</div>
+                    {isEditing && (<div className="modal-footer-custom"><button className="btn btn-secondary" onClick={() => { setIsEditing(false); setEditedJobData(null); }}>Cancel</button><button className="btn" onClick={handleSave}>Save & Close</button></div>)}
+                </div>
+            </div>
+        </BaseModal>
+    );
+};
+
 window.CategoryManagerModal = ({ onClose, categories, categoryColors, categoryCounts, onAddCategory, onRenameCategory, onDeleteCategory }) => {
     const { useState } = React;
     const [newCategoryName, setNewCategoryName] = useState('');

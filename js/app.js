@@ -18,6 +18,8 @@ function App() {
     const [showImportModal, setShowImportModal] = useState(false);
     const [editingJob, setEditingJob] = useState(null);
     const [editingInterviewId, setEditingInterviewId] = useState(null);
+    const [viewingJob, setViewingJob] = useState(null);
+    const [highlightInterviewId, setHighlightInterviewId] = useState(null);
     const [lastBackupTime, setLastBackupTime] = useState(null);
     const [filters, setFilters] = useState({ status: "all", priority: "all", company: "", search: "" });
     const [sortConfig, setSortConfig] = useState({ key: 'dateApplied', direction: 'desc' });
@@ -463,6 +465,12 @@ function App() {
         setInitialInterviewCompany('');
         setView(newView);
     };
+    
+    const handleJumpToInterview = (interviewId, company) => {
+        setInitialInterviewCompany(company);
+        setHighlightInterviewId(interviewId);
+        setView('interviews');
+    };
 
     return (
         <div className="app">
@@ -480,7 +488,7 @@ function App() {
             )}
             <window.Header view={view} setView={handleHeaderViewChange} onBackup={exportBackup} onImport={() => setShowImportModal(true)} lastBackupTime={lastBackupTime} theme={theme} toggleTheme={toggleTheme} />
             <main className="main">
-                {view === "dashboard" && <window.AnalyticsDashboard jobs={jobs} onEditJob={(job, interviewId) => { setEditingJob(job); setEditingInterviewId(interviewId); setShowModal(true); }} />}
+                {view === "dashboard" && <window.AnalyticsDashboard jobs={jobs} onEditJob={(job, interviewId) => { setEditingJob(job); setEditingInterviewId(interviewId); setShowModal(true); }} onViewJob={(job) => setViewingJob(job)} onJumpToInterview={handleJumpToInterview} />}
                 {view === "companies" && <window.Companies
                     companies={allCompanies}
                     jobs={jobs}
@@ -507,6 +515,7 @@ function App() {
                     existingCategories={Object.keys(allCompanies)}
                     onAdd={() => { setEditingJob(null); setShowModal(true); }}
                     onEdit={(job) => { setEditingJob(job); setShowModal(true); }}
+                    onViewJob={(job) => setViewingJob(job)}
                     onUpdateJob={updateJob}
                     onDelete={deleteJob}
                     onExport={exportToCSV}
@@ -515,7 +524,7 @@ function App() {
                     getSortIcon={getSortIcon}
                     onViewInterviews={(company) => { setInitialInterviewCompany(company); setView('interviews'); }}
                 />}
-                {view === "interviews" && <window.Interviews jobs={jobs} initialCompany={initialInterviewCompany} onEditJob={(job, interviewId) => { setEditingJob(job); setEditingInterviewId(interviewId); setShowModal(true); }} />}
+                {view === "interviews" && <window.Interviews jobs={jobs} initialCompany={initialInterviewCompany} highlightInterviewId={highlightInterviewId} onEditJob={(job, interviewId) => { setEditingJob(job); setEditingInterviewId(interviewId); setShowModal(true); }} />}
                 {view === "stats" && <window.Stats jobs={jobs} />}
             </main>
             {showModal && (
@@ -527,6 +536,14 @@ function App() {
                     existingCategories={Object.keys(allCompanies)}
                     categoryColors={categoryColors}
                     companyCategories={editingJob ? (customCompanies[editingJob.company]?.categories || []) : []}
+                />
+            )}
+            {viewingJob && (
+                <window.JobDetailsModal
+                    job={viewingJob}
+                    onClose={() => setViewingJob(null)}
+                    onUpdateJob={updateJob}
+                    onViewInterviews={(company) => { setViewingJob(null); setInitialInterviewCompany(company); setView('interviews'); }}
                 />
             )}
             {showCompanyModal && (<window.CompanyModal onSave={addCompany} onClose={() => setShowCompanyModal(false)} existingCategories={Object.keys(allCompanies)} categoryColors={categoryColors} />)}

@@ -64,7 +64,7 @@ window.generateInsights = (metrics, timeData, companyData) => {
     return insights;
 };
 
-window.UpcomingInterviews = ({ jobs, onEditJob }) => {
+window.UpcomingInterviews = ({ jobs, onEditJob, onJumpToInterview, onViewJob }) => {
     const upcoming = React.useMemo(() => {
         const list = [];
         const now = new Date();
@@ -92,7 +92,7 @@ window.UpcomingInterviews = ({ jobs, onEditJob }) => {
                         {upcoming.map(i => (
                             <tr key={i.id}>
                                 <td><window.Tooltip text={i.format || 'Video Call'}><span style={{ cursor: 'help', fontSize: '1.2em' }}>{window.getFormatIcon(i.format)}</span></window.Tooltip></td>
-                                <td><button onClick={() => onEditJob(jobs.find(j => j.id === i.jobId), i.id)} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 'inherit', textAlign: 'left' }}>{new Date(i.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</button></td>
+                                <td><button onClick={() => onJumpToInterview(i.id, i.company)} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 'inherit', textAlign: 'left' }}>{new Date(i.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</button></td>
                                 <td>{new Date(i.date).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</td>
                                 <td><strong>{i.company}</strong></td>
                                 <td><button onClick={() => onEditJob(jobs.find(j => j.id === i.jobId))} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 'inherit', textAlign: 'left' }}>{i.role}</button></td>
@@ -111,7 +111,7 @@ window.UpcomingInterviews = ({ jobs, onEditJob }) => {
     );
 };
 
-window.AnalyticsDashboard = ({ jobs, onEditJob }) => {
+window.AnalyticsDashboard = ({ jobs, onEditJob, onJumpToInterview, onViewJob }) => {
     const { useMemo, useState } = React;
     const [timeRange, setTimeRange] = useState('all');
     const [customStart, setCustomStart] = useState('');
@@ -192,7 +192,7 @@ window.AnalyticsDashboard = ({ jobs, onEditJob }) => {
     return (
         <div className="analytics-dashboard">
             <window.KeyMetricsGrid metrics={overview} />
-            <window.UpcomingInterviews jobs={jobs} onEditJob={onEditJob} />
+            <window.UpcomingInterviews jobs={jobs} onEditJob={onEditJob} onJumpToInterview={onJumpToInterview} onViewJob={onViewJob} />
             <div className="charts-section">
                 <div className="chart-large">
                     <window.ChartCard title="Applications & response activity">

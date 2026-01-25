@@ -1,12 +1,5 @@
-window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategories, companies, onUpdateCompany, setDeletedCategories, onAdd, onEdit, onUpdateJob, onDelete, onExport, onBackup, requestSort, getSortIcon, onViewInterviews }) => {
-    const { useState, useRef, useEffect } = React;
-    const [viewModalOpen, setViewModalOpen] = useState(false);
-    const [viewModalJob, setViewModalJob] = useState(null);
-    const [viewModalEdit, setViewModalEdit] = useState(false);
-    const [editedJobData, setEditedJobData] = useState(null);
-    const notesTextareaRef = useRef(null);
-    const autoExpandTextarea = () => { if (notesTextareaRef.current) { notesTextareaRef.current.style.height = 'auto'; notesTextareaRef.current.style.height = Math.max(notesTextareaRef.current.scrollHeight, 120) + 'px'; } };
-    useEffect(() => { autoExpandTextarea(); }, [viewModalJob, editedJobData, viewModalEdit]);
+window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategories, companies, onUpdateCompany, setDeletedCategories, onAdd, onEdit, onViewJob, onUpdateJob, onDelete, onExport, onBackup, requestSort, getSortIcon, onViewInterviews }) => {
+    const { useState, useEffect } = React;
     const [visibleColumns, setVisibleColumns] = useState({ company: true, role: true, status: true, priority: false, dateApplied: true, salary: false, closeReason: false, progression: true, followUp: false, notes: false, resumeUrl: false, coverLetterUrl: false, fitLevel: true, categories: true });
     const [showColumnSelector, setShowColumnSelector] = useState(false);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -194,7 +187,7 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
                                 {paginatedJobs.map(job => (
                                     <tr key={job.id}>
                                         {visibleColumns.company && <td><strong>{job.company}</strong></td>}
-                                        {visibleColumns.role && (<td className="flex-center-gap"><button className="icon-btn" title="View" onClick={() => { setViewModalJob(job); setViewModalOpen(true); setViewModalEdit(false); }}><span role="img" aria-label="View">👁️</span></button>{job.url ? (<a href={job.url} target="_blank" rel="noopener noreferrer" className="link">{job.role}&nbsp;<span className="link-arrow">↗</span></a>) : job.role}</td>)}
+                                        {visibleColumns.role && (<td className="flex-center-gap"><button className="icon-btn" title="View" onClick={() => onViewJob(job)}><span role="img" aria-label="View">👁️</span></button>{job.url ? (<a href={job.url} target="_blank" rel="noopener noreferrer" className="link">{job.role}&nbsp;<span className="link-arrow">↗</span></a>) : job.role}</td>)}
                                         {visibleColumns.status && <td><window.StatusBadge status={job.status} /></td>}
                                         {visibleColumns.categories && (
                                             <td>
@@ -233,65 +226,6 @@ window.JobsTable = ({ jobs, filters, setFilters, categoryColors, existingCategor
                         </div>
                     )}
                 </>
-            )}
-            {viewModalOpen && (
-                <div className="modal-overlay" onClick={() => setViewModalOpen(false)}>
-                    <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
-                        <div className="modal-header">
-                            <h2>Application details</h2>
-                            <div className="flex-gap">
-                                {viewModalEdit ? (<button className="btn" onClick={() => { onUpdateJob(editedJobData); setViewModalOpen(false); setViewModalEdit(false); setEditedJobData(null); }}>Save & close</button>) : (<window.Tooltip text="Edit"><button className="icon-btn" onClick={() => { if (!viewModalEdit) { setEditedJobData({ ...viewModalJob }); } setViewModalEdit(true); }}><span role="img" aria-label="Edit">✏️</span></button></window.Tooltip>)}
-                                <button className="modal-close" onClick={() => setViewModalOpen(false)}>×</button>
-                            </div>
-                        </div>
-                        <div className="modal-body">
-                            {viewModalJob ? (
-                                <div className="job-details-header">
-                                    <h3 className="job-details-title">{viewModalEdit ? editedJobData?.role : viewModalJob.role} @ {viewModalEdit ? editedJobData?.company : viewModalJob.company}</h3>
-                                    <div className="form-row">
-                                        <div className="form-group"><label>Company</label><input type="text" value={viewModalEdit ? editedJobData?.company || '' : viewModalJob.company} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, company: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                        <div className="form-group"><label>Role</label><input type="text" value={viewModalEdit ? editedJobData?.role || '' : viewModalJob.role} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, role: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                    </div>
-                                    <div className="form-group"><label>Job URL</label>{viewModalEdit ? (<input type="url" value={editedJobData?.url || ''} onChange={e => { setEditedJobData({ ...editedJobData, url: e.target.value }); }} />) : (viewModalJob.url ? (<div className="view-field job-url-display"><a href={viewModalJob.url} target="_blank" rel="noopener noreferrer" className="link" onClick={(e) => e.stopPropagation()}>{viewModalJob.url}</a></div>) : (<div className="view-field">-</div>))}</div>
-                                    <div className="form-row">
-                                        <div className="form-group"><label>Resume URL</label>{viewModalEdit ? (<input type="url" value={editedJobData?.resumeUrl || ''} onChange={e => { setEditedJobData({ ...editedJobData, resumeUrl: e.target.value }); }} />) : (viewModalJob.resumeUrl ? (<div className="view-field job-url-display"><a href={viewModalJob.resumeUrl} target="_blank" rel="noopener noreferrer" className="link" onClick={(e) => e.stopPropagation()}>{viewModalJob.resumeUrl}</a></div>) : (<div className="view-field">-</div>))}</div>
-                                        <div className="form-group"><label>Cover letter URL</label>{viewModalEdit ? (<input type="url" value={editedJobData?.coverLetterUrl || ''} onChange={e => { setEditedJobData({ ...editedJobData, coverLetterUrl: e.target.value }); }} />) : (viewModalJob.coverLetterUrl ? (<div className="view-field job-url-display"><a href={viewModalJob.coverLetterUrl} target="_blank" rel="noopener noreferrer" className="link" onClick={(e) => e.stopPropagation()}>{viewModalJob.coverLetterUrl}</a></div>) : (<div className="view-field">-</div>))}</div>
-                                    </div>
-                                    <div className="form-row">
-                                        <div className="form-group"><label>Status</label><input type="text" value={viewModalEdit ? editedJobData?.status || '' : viewModalJob.status || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, status: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                        <div className="form-group"><label>Date applied</label><input type="date" value={viewModalEdit ? editedJobData?.dateApplied || '' : viewModalJob.dateApplied || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, dateApplied: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                    </div>
-                                    <div className="form-row">
-                                        <div className="form-group"><label>Progression</label><input type="text" value={viewModalEdit ? editedJobData?.progression || '' : viewModalJob.progression || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, progression: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                        <div className="form-group"><label>Priority</label><input type="text" value={viewModalEdit ? editedJobData?.priority || '' : viewModalJob.priority || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, priority: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                    </div>
-                                    {viewModalJob.interviews && viewModalJob.interviews.length > 0 && (
-                                        <div className="form-group">
-                                            <label>Interviews</label>
-                                            <div className="modal-interviews-summary">
-                                                <span className="text-primary">{viewModalJob.interviews.length} round{viewModalJob.interviews.length !== 1 ? 's' : ''}</span>
-                                                <button onClick={() => { setViewModalOpen(false); onViewInterviews(viewModalJob.company); }} className="btn-link">View details →</button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {(viewModalJob.closeReason || viewModalJob.followUp) && (
-                                        <div className="form-row">
-                                            <div className="form-group"><label>Close reason</label><input type="text" value={viewModalEdit ? editedJobData?.closeReason || '' : viewModalJob.closeReason || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, closeReason: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                            <div className="form-group"><label>Close date</label><input type="date" value={viewModalEdit ? editedJobData?.followUp || '' : viewModalJob.followUp || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, followUp: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                        </div>
-                                    )}
-                                    <div className="form-row">
-                                        <div className="form-group"><label>Salary</label><input type="text" value={viewModalEdit ? editedJobData?.salary || '' : viewModalJob.salary || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, salary: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                        <div className="form-group"><label>Location</label><input type="text" value={viewModalEdit ? editedJobData?.location || '' : viewModalJob.location || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, location: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                    </div>
-                                    <div className="form-group"><label>Contact name</label><input type="text" value={viewModalEdit ? editedJobData?.contact || '' : viewModalJob.contact || ''} readOnly={!viewModalEdit} onChange={e => { setEditedJobData({ ...editedJobData, contact: e.target.value }); }} className={viewModalEdit ? '' : 'view-field'} /></div>
-                                    <div className="form-group"><label>Notes</label>{viewModalEdit ? (<textarea value={editedJobData?.notes || ''} onChange={e => { setEditedJobData({ ...editedJobData, notes: e.target.value }); autoExpandTextarea(); }} ref={notesTextareaRef} className="notes-edit" />) : (<div className="view-field notes-view" dangerouslySetInnerHTML={{ __html: viewModalJob.notes ? window.UIUtil.linkify(viewModalJob.notes) : '-' }}></div>)}</div>
-                                    {viewModalEdit && (<div className="modal-footer-custom"><button className="btn btn-secondary" onClick={() => { setViewModalEdit(false); setEditedJobData(null); }}>Cancel</button><button className="btn" onClick={() => { onUpdateJob(editedJobData); setViewModalOpen(false); setViewModalEdit(false); setEditedJobData(null); }}>Save & Close</button></div>)}
-                                </div>
-                            ) : (<div>No job found.</div>)}
-                        </div>
-                    </div>
-                </div>
             )}
             {showCategoryManager && (
                 <window.CategoryManagerModal 
