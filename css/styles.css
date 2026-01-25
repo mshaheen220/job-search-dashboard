@@ -1940,6 +1940,95 @@ body {
     font-size: 0.85rem;
 }
 
+/* Applications Component Specifics */
+.mt-4 { margin-top: 1rem; }
+.flex-center-gap { display: flex; align-items: center; gap: 0.5rem; }
+.flex-gap { display: flex; gap: 0.5rem; }
+.text-secondary-sm { color: var(--text-secondary); font-size: 0.9rem; }
+.text-primary { color: var(--text-primary); }
+.link-arrow { font-size: 0.85em; margin-left: 0.25rem; }
+
+.grid-responsive {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.grid-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.75rem;
+}
+
+.panel-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.btn-icon-text {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.checkbox-input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent-primary);
+}
+
+.modal-interviews-summary {
+    background: var(--bg-tertiary);
+    border: 1px dashed var(--border-primary);
+    padding: 0.75rem;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--accent-primary);
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.9rem;
+    padding: 0;
+}
+
+.modal-footer-custom {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border-primary);
+    padding-top: 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.notes-view {
+    cursor: default;
+    min-height: 120px;
+    padding: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.notes-edit {
+    min-height: 120px;
+    resize: vertical;
+    overflow: hidden;
+}
+
 /* Category Manager Modal */
 .category-manager-add {
     margin-bottom: 2rem;
