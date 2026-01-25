@@ -110,6 +110,14 @@ window.getFormatIcon = (format) => {
     return '❓';
 };
 
+window.CategoryUtil = {
+    getColor(category, customColors) {
+        if (category === 'None') return '#6b7280';
+        if (customColors && customColors[category]) return customColors[category];
+        return 'var(--accent-primary)';
+    }
+};
+
 window.SecurityUtil = {
     CONFIG: {
         MAX_STRING_LENGTH: 10000,

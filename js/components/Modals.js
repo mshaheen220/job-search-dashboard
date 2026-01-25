@@ -69,21 +69,21 @@ const InterviewManager = ({ interviews, onChange, initialEditingInterviewId }) =
     };
 
     return (
-        <div className="form-group" style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div className="form-group interview-manager-container">
+            <div className="interview-manager-header">
                 <label style={{ marginBottom: 0 }}>Interviews ({interviews.length})</label>
-                {!isAdding && <button type="button" onClick={() => setIsAdding(true)} style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500' }}>+ Add Round</button>}
+                {!isAdding && <button type="button" onClick={() => setIsAdding(true)} className="btn-text-action">+ Add Round</button>}
             </div>
             
             {interviews.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: isAdding ? '1rem' : 0 }}>
+                <div className="interview-list" style={{ marginBottom: isAdding ? '1rem' : 0 }}>
                     {interviews.sort((a, b) => new Date(a.date) - new Date(b.date)).map((interview, idx) => (
-                        <div key={interview.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
+                        <div key={interview.id} className="interview-item">
                             <div>
-                                <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>{interview.type}</div>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{interview.date ? new Date(interview.date).toLocaleString() : 'No date'} · {interview.format || 'Video Call'} · {interview.duration}m</div>
+                                <div className="interview-item-title">{interview.type}</div>
+                                <div className="interview-item-details">{interview.date ? new Date(interview.date).toLocaleString() : 'No date'} · {interview.format || 'Video Call'} · {interview.duration}m</div>
                                 {interview.interviewers && interview.interviewers.length > 0 && (
-                                    <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                                    <div className="interview-item-interviewers">
                                         {interview.interviewers.map((iv, i) => (
                                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                                 <span>👤 {iv.name}</span>
@@ -93,9 +93,9 @@ const InterviewManager = ({ interviews, onChange, initialEditingInterviewId }) =
                                     </div>
                                 )}
                             </div>
-                            <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                <window.Tooltip text="Edit round"><button type="button" onClick={() => handleEdit(interview)} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}>✏️</button></window.Tooltip>
-                                <window.Tooltip text="Delete round"><button type="button" onClick={() => handleDelete(interview.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}>×</button></window.Tooltip>
+                            <div className="interview-item-actions">
+                                <window.Tooltip text="Edit round"><button type="button" onClick={() => handleEdit(interview)} className="icon-btn-sm">✏️</button></window.Tooltip>
+                                <window.Tooltip text="Delete round"><button type="button" onClick={() => handleDelete(interview.id)} className="icon-btn-sm danger">×</button></window.Tooltip>
                             </div>
                         </div>
                     ))}
@@ -103,37 +103,37 @@ const InterviewManager = ({ interviews, onChange, initialEditingInterviewId }) =
             )}
 
             {isAdding && (
-                <div ref={formRef} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px dashed var(--accent-primary)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                        <select value={newInterview.type} onChange={e => setNewInterview({...newInterview, type: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}><option>Recruiter Screen</option><option>Technical Screen</option><option>Hiring Manager</option><option>System Design</option><option>Coding Round</option><option>Behavioral</option><option>Final Round</option></select>
-                        <select value={newInterview.format} onChange={e => setNewInterview({...newInterview, format: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>{Object.values(window.INTERVIEW_FORMATS).map(f => <option key={f} value={f}>{f}</option>)}</select>
+                <div ref={formRef} className="interview-form">
+                    <div className="form-grid-2">
+                        <select value={newInterview.type} onChange={e => setNewInterview({...newInterview, type: e.target.value})} className="form-input-sm"><option>Recruiter Screen</option><option>Technical Screen</option><option>Hiring Manager</option><option>System Design</option><option>Coding Round</option><option>Behavioral</option><option>Final Round</option></select>
+                        <select value={newInterview.format} onChange={e => setNewInterview({...newInterview, format: e.target.value})} className="form-input-sm">{Object.values(window.INTERVIEW_FORMATS).map(f => <option key={f} value={f}>{f}</option>)}</select>
                     </div>
-                    <input type="text" placeholder="Meeting link, phone number, or location" value={newInterview.connectionDetails} onChange={e => setNewInterview({...newInterview, connectionDetails: e.target.value})} style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.9rem' }} />
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
-                        <input type="datetime-local" value={newInterview.date} onChange={e => setNewInterview({...newInterview, date: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
-                        <input type="number" placeholder="Mins" value={newInterview.duration} onChange={e => setNewInterview({...newInterview, duration: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+                    <input type="text" placeholder="Meeting link, phone number, or location" value={newInterview.connectionDetails} onChange={e => setNewInterview({...newInterview, connectionDetails: e.target.value})} className="form-input-sm" />
+                    <div className="form-grid-2-1">
+                        <input type="datetime-local" value={newInterview.date} onChange={e => setNewInterview({...newInterview, date: e.target.value})} className="form-input-sm" />
+                        <input type="number" placeholder="Mins" value={newInterview.duration} onChange={e => setNewInterview({...newInterview, duration: e.target.value})} className="form-input-sm" />
                     </div>
                     
-                    <div style={{ background: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-primary)' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem' }}>Interviewers</div>
+                    <div className="interviewer-section">
+                        <div className="section-title">Interviewers</div>
                         {newInterview.interviewers.map((iv, idx) => (
-                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem', padding: '0.25rem', background: 'color-mix(in srgb, var(--accent-primary), transparent 90%)', borderRadius: '4px' }}>
+                            <div key={idx} className="interviewer-tag">
                                 <span>{iv.name} {iv.title && `(${iv.title})`}</span>
                                 <button type="button" onClick={() => setNewInterview(prev => ({ ...prev, interviewers: prev.interviewers.filter((_, i) => i !== idx) }))} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', marginRight: '0.25rem' }}>×</button>
                             </div>
                         ))}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', marginTop: '1.0rem', borderTop: '1px dashed var(--border-primary)', paddingTop: '0.5rem' }}>
-                            <input type="text" placeholder="Name" value={tempInterviewer.name} onChange={e => setTempInterviewer({...tempInterviewer, name: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
-                            <input type="text" placeholder="Title" value={tempInterviewer.title} onChange={e => setTempInterviewer({...tempInterviewer, title: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
-                            <input type="email" placeholder="Email" value={tempInterviewer.email} onChange={e => setTempInterviewer({...tempInterviewer, email: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
-                            <input type="url" placeholder="LinkedIn URL" value={tempInterviewer.linkedin} onChange={e => setTempInterviewer({...tempInterviewer, linkedin: e.target.value})} style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-primary)', fontSize: '0.85rem' }} />
+                        <div className="interviewer-inputs">
+                            <input type="text" placeholder="Name" value={tempInterviewer.name} onChange={e => setTempInterviewer({...tempInterviewer, name: e.target.value})} className="form-input-sm" style={{ padding: '0.3rem', fontSize: '0.85rem' }} />
+                            <input type="text" placeholder="Title" value={tempInterviewer.title} onChange={e => setTempInterviewer({...tempInterviewer, title: e.target.value})} className="form-input-sm" style={{ padding: '0.3rem', fontSize: '0.85rem' }} />
+                            <input type="email" placeholder="Email" value={tempInterviewer.email} onChange={e => setTempInterviewer({...tempInterviewer, email: e.target.value})} className="form-input-sm" style={{ padding: '0.3rem', fontSize: '0.85rem' }} />
+                            <input type="url" placeholder="LinkedIn URL" value={tempInterviewer.linkedin} onChange={e => setTempInterviewer({...tempInterviewer, linkedin: e.target.value})} className="form-input-sm" style={{ padding: '0.3rem', fontSize: '0.85rem' }} />
                         </div>
-                        <button type="button" onClick={addInterviewer} disabled={!tempInterviewer.name} style={{ width: '100%', padding: '0.3rem', background: 'var(--bg-hover)', border: '1px solid var(--border-primary)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>+ Add Interviewer</button>
+                        <button type="button" onClick={addInterviewer} disabled={!tempInterviewer.name} className="btn-add-interviewer">+ Add Interviewer</button>
                     </div>
 
-                    <textarea placeholder="Notes / Focus areas" value={newInterview.notes} onChange={e => setNewInterview({...newInterview, notes: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', minHeight: '60px' }} />
-                    <select value={newInterview.sentiment} onChange={e => setNewInterview({...newInterview, sentiment: e.target.value})} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}><option value="">How did it go?</option>{Object.values(window.INTERVIEW_SENTIMENTS).map(s => <option key={s} value={s}>{s}</option>)}</select>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}><button type="button" onClick={handleCancel} className="btn btn-sm btn-secondary">Cancel</button><button type="button" onClick={handleSave} className="btn btn-sm">{editingId ? 'Update' : 'Add'}</button></div>
+                    <textarea placeholder="Notes / Focus areas" value={newInterview.notes} onChange={e => setNewInterview({...newInterview, notes: e.target.value})} className="form-input-sm" style={{ minHeight: '60px' }} />
+                    <select value={newInterview.sentiment} onChange={e => setNewInterview({...newInterview, sentiment: e.target.value})} className="form-input-sm"><option value="">How did it go?</option>{Object.values(window.INTERVIEW_SENTIMENTS).map(s => <option key={s} value={s}>{s}</option>)}</select>
+                    <div className="form-actions"><button type="button" onClick={handleCancel} className="btn btn-sm btn-secondary">Cancel</button><button type="button" onClick={handleSave} className="btn btn-sm">{editingId ? 'Update' : 'Add'}</button></div>
                 </div>
             )}
         </div>
@@ -224,32 +224,32 @@ window.CategoryManagerModal = ({ onClose, categories, categoryColors, categoryCo
 
     return (
         <BaseModal title="Manage categories" onClose={onClose}>
-                <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
-                    <div style={{ marginBottom: "2rem", padding: "1rem", background: "var(--bg-elevated)", borderRadius: "10px" }}>
+                <div className="modal-body modal-body-scrollable">
+                    <div className="category-manager-add">
                         <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Add new category</h3>
-                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                            <input type="text" placeholder="Category name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAdd()} style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", border: "1px solid var(--border-primary)", borderRadius: "6px", color: "var(--text-primary)", fontSize: "0.9rem" }} autoFocus />
-                            <window.Tooltip text="Choose category color"><input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} style={{ width: '36px', height: '36px', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} /></window.Tooltip>
+                        <div className="category-manager-row">
+                            <input type="text" placeholder="Category name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAdd()} className="category-manager-input" autoFocus />
+                            <window.Tooltip text="Choose category color"><input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} className="category-manager-color" /></window.Tooltip>
                             <button onClick={handleAdd} className="btn" style={{ whiteSpace: "nowrap" }}>Add</button>
                         </div>
                     </div>
                     <div>
                         <h3 style={{ marginBottom: "1rem", fontSize: "0.95rem", fontWeight: "600" }}>Categories ({categories.length})</h3>
                         {categories.length === 0 ? (<p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>No categories yet</p>) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                            <div className="category-list">
                                 {categories.map(category => {
                                     const companyCount = categoryCounts[category] || 0;
                                     const isEditing = editingCategoryName === category;
-                                    const currentColor = category === 'None' ? '#9ca3af' : (categoryColors[category] || '#3b82f6');
+                                    const currentColor = window.CategoryUtil.getColor(category, categoryColors);
                                     return (
-                                        <div key={category} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", background: "var(--bg-elevated)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                                        <div key={category} className="category-list-item">
                                             {isEditing ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', flex: 1, marginRight: '0.5rem' }}><input type="text" value={editingCategoryNewName} onChange={(e) => setEditingCategoryNewName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleRename(category)} style={{ flex: 1, padding: "0.5rem", background: "var(--bg-primary)", border: "1px solid var(--accent-primary)", borderRadius: "4px", color: "var(--text-primary)", marginRight: "0.5rem" }} autoFocus /><input type="color" value={editingCategoryColor} onChange={(e) => setEditingCategoryColor(e.target.value)} style={{ width: '32px', height: '32px', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} title="Choose color" /></div>
+                                                <div className="category-edit-container"><input type="text" value={editingCategoryNewName} onChange={(e) => setEditingCategoryNewName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleRename(category)} className="category-manager-input" style={{ marginRight: "0.5rem", borderColor: "var(--accent-primary)" }} autoFocus /><input type="color" value={editingCategoryColor} onChange={(e) => setEditingCategoryColor(e.target.value)} className="color-picker-sm" title="Choose color" /></div>
                                             ) : (
-                                                <div style={{ display: 'flex', alignItems: 'center' }}><div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: currentColor, marginRight: '0.5rem' }}></div><div><span style={{ fontWeight: "500", color: "var(--text-primary)" }}>{category}</span><span style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>({companyCount} {companyCount === 1 ? 'company' : 'companies'})</span></div></div>
+                                                <div style={{ display: 'flex', alignItems: 'center' }}><div className="category-dot" style={{ backgroundColor: currentColor }}></div><div><span style={{ fontWeight: "500", color: "var(--text-primary)" }}>{category}</span><span style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>({companyCount} {companyCount === 1 ? 'company' : 'companies'})</span></div></div>
                                             )}
                                             <div style={{ display: "flex", gap: "0.5rem" }}>
-                                                {isEditing ? (<><button onClick={() => handleRename(category)} style={{ padding: "0.4rem 0.8rem", background: "var(--accent-primary)", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Save</button><button onClick={() => setEditingCategoryName(null)} style={{ padding: "0.4rem 0.8rem", background: "var(--bg-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Cancel</button></>) : (<><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { setEditingCategoryName(category); setEditingCategoryNewName(category); setEditingCategoryColor(categoryColors[category] || '#3b82f6'); } }} disabled={category === 'None'} title={category === 'None' ? "Can't edit default category" : ""} style={{ padding: "0.4rem 0.8rem", background: category === 'None' ? "var(--bg-primary)" : "var(--bg-hover)", color: category === 'None' ? "var(--text-tertiary)" : "var(--text-secondary)", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: category === 'None' ? "not-allowed" : "pointer", fontSize: "0.8rem", opacity: category === 'None' ? 0.5 : 1 }}>Edit</button><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { onDeleteCategory(category); } }} disabled={category === 'None'} title={category === 'None' ? "Can't delete default category" : ""} style={{ padding: "0.4rem 0.8rem", background: category === 'None' ? "var(--bg-primary)" : "rgba(255, 0, 0, 0.1)", color: category === 'None' ? "var(--text-tertiary)" : "#ff4444", border: "1px solid var(--border-primary)", borderRadius: "4px", cursor: category === 'None' ? "not-allowed" : "pointer", fontSize: "0.8rem", opacity: category === 'None' ? 0.5 : 1 }}>Delete</button></>)}
+                                                {isEditing ? (<><button onClick={() => handleRename(category)} className="btn-xs primary">Save</button><button onClick={() => setEditingCategoryName(null)} className="btn-xs secondary">Cancel</button></>) : (<><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { setEditingCategoryName(category); setEditingCategoryNewName(category); setEditingCategoryColor(categoryColors[category] || '#3b82f6'); } }} disabled={category === 'None'} title={category === 'None' ? "Can't edit default category" : ""} className="btn-xs secondary" style={{ opacity: category === 'None' ? 0.5 : 1, cursor: category === 'None' ? "not-allowed" : "pointer" }}>Edit</button><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { onDeleteCategory(category); } }} disabled={category === 'None'} title={category === 'None' ? "Can't delete default category" : ""} className="btn-xs danger-light" style={{ opacity: category === 'None' ? 0.5 : 1, cursor: category === 'None' ? "not-allowed" : "pointer" }}>Delete</button></>)}
                                             </div>
                                         </div>
                                     );
@@ -354,7 +354,7 @@ window.ImportModal = ({ onImport, onClose }) => {
                         </div>
                     ) : (
                         <>
-                            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
+                            <div className="preview-box">
                                 <h3 style={{ color: 'var(--accent-primary)', marginBottom: '1rem' }}>📊 Preview</h3>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                     <div><div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Jobs to import</div><div style={{ color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: 'bold' }}>{preview.jobCount}</div></div>
@@ -363,14 +363,14 @@ window.ImportModal = ({ onImport, onClose }) => {
                                 <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.5rem' }}>Backup created: {preview.exportDate}</div>
                                 {preview.companies.length > 0 && (<div style={{ marginTop: '1rem' }}><div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Companies (first 10):</div><div style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{preview.companies.join(', ')}{preview.jobCount > 10 && '...'}</div></div>)}
                             </div>
-                            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
+                            <div className="preview-box">
                                 <h3 style={{ color: 'var(--accent-primary)', marginBottom: '1rem' }}>Import mode</h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer', padding: '0.75rem', background: importMode === 'merge' ? 'var(--bg-hover)' : 'transparent', borderRadius: '6px', border: `1px solid ${importMode === 'merge' ? 'var(--accent-primary)' : 'var(--border-primary)'}` }}>
+                                    <label className={`import-option ${importMode === 'merge' ? 'selected' : ''}`}>
                                         <input type="radio" name="importMode" value="merge" checked={importMode === 'merge'} onChange={(e) => setImportMode(e.target.value)} style={{ marginRight: '0.75rem', marginTop: '0.25rem' }} />
                                         <div><div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>🔄 Merge (recommended for historical data)</div><div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Adds new jobs and companies without deleting existing data. Skips duplicates based on company + role + date.</div></div>
                                     </label>
-                                    <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer', padding: '0.75rem', background: importMode === 'replace' ? 'var(--bg-hover)' : 'transparent', borderRadius: '6px', border: `1px solid ${importMode === 'replace' ? 'var(--accent-primary)' : 'var(--border-primary)'}` }}>
+                                    <label className={`import-option ${importMode === 'replace' ? 'selected' : ''}`}>
                                         <input type="radio" name="importMode" value="replace" checked={importMode === 'replace'} onChange={(e) => setImportMode(e.target.value)} style={{ marginRight: '0.75rem', marginTop: '0.25rem' }} />
                                         <div><div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>⚠️ Replace all</div><div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Deletes all current data and replaces with backup. Use when restoring from backup.</div></div>
                                     </label>

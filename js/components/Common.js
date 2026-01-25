@@ -70,17 +70,13 @@ window.CategoryList = ({ categories, categoryColors }) => {
     const containerRef = useRef(null);
 
     const getCategoryClassName = (category) => {
-        const classMap = { 'Developer Tools': 'category-developer-tools', 'Data Infrastructure': 'category-data-infrastructure', 'Cloud/Infrastructure': 'category-cloud-infrastructure', 'Enterprise Software': 'category-enterprise-software', 'Consumer Tech': 'category-consumer-tech', 'None': 'category-none' };
-        if (classMap[category]) return `category-pill ${classMap[category]}`;
-        let hash = 0; for (let i = 0; i < category.length; i++) { hash = ((hash << 5) - hash) + category.charCodeAt(i); hash = hash & hash; }
-        const colorIndex = Math.abs(hash) % 12; return `category-pill category-custom-${colorIndex}`;
+        return 'category-pill';
     };
     
     const getCategoryStyle = (category) => {
-        if (categoryColors && categoryColors[category]) {
-            return { backgroundColor: categoryColors[category] + '20', color: categoryColors[category], border: `1px solid ${categoryColors[category]}` };
-        }
-        return {};
+        const color = window.CategoryUtil.getColor(category, categoryColors);
+        const bg = color.startsWith('#') ? color + '20' : `color-mix(in srgb, ${color}, transparent 85%)`;
+        return { backgroundColor: bg, color: color, border: `1px solid ${color}` };
     };
 
     useLayoutEffect(() => {
@@ -203,7 +199,8 @@ window.CategorySelector = ({
             >
                 {allCategories.map(cat => {
                     const isSelected = selectedCategories.includes(cat);
-                    const color = categoryColors && categoryColors[cat] ? categoryColors[cat] : 'var(--accent-primary)';
+                    const color = window.CategoryUtil.getColor(cat, categoryColors);
+                    const bgColor = color.startsWith('#') ? color + '20' : `color-mix(in srgb, ${color}, transparent 85%)`;
                     return (
                         <button 
                             type="button" 
@@ -212,7 +209,7 @@ window.CategorySelector = ({
                             className="category-selector-btn"
                             style={{
                                 border: isSelected ? `2px solid ${color}` : undefined,
-                                background: isSelected ? (categoryColors && categoryColors[cat] ? color + '20' : 'var(--bg-secondary)') : undefined,
+                                background: isSelected ? bgColor : undefined,
                                 color: isSelected ? color : undefined
                             }}
                         >
