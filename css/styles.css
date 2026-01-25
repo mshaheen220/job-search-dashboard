@@ -1141,3 +1141,19 @@ body {
     animation: fadeIn 0.2s ease;
     font-weight: 500;
 }
+
+.stat-card.interview-card {
+    align-items: flex-start;
+    padding: 1.5rem;
+    gap: 1rem;
+}
+
+.stat-card.interview-today {
+    border: 2px solid var(--success);
+    background: color-mix(in srgb, var(--success), transparent 92%);
+}
+
+.stat-card.interview-tomorrow {
+    border: 2px solid var(--warning);
+    background: color-mix(in srgb, var(--warning), transparent 92%);
+}

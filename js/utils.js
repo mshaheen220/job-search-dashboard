@@ -190,6 +190,7 @@ window.SecurityUtil = {
                 type: this.sanitizeInput(i.type, 50),
                 format: this.sanitizeInput(i.format || 'Video Call', 50),
                 sentiment: this.sanitizeInput(i.sentiment || '', 20),
+                connectionDetails: this.sanitizeInput(i.connectionDetails || '', 500),
                 date: i.date || '',
                 duration: parseInt(i.duration) || 0,
                 interviewers: Array.isArray(i.interviewers) ? i.interviewers.map(iv => ({

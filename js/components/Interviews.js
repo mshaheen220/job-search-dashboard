@@ -84,8 +84,21 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
                 </div>
             ) : (
                 <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))' }}>
-                    {displayList.map(interview => (
-                        <div key={interview.id} className="stat-card" style={{ flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '1rem' }}>
+                    {displayList.map(interview => {
+                        const interviewDate = interview.date ? new Date(interview.date) : null;
+                        const now = new Date();
+                        const tomorrow = new Date(now);
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        
+                        let dateClass = '';
+                        if (interviewDate) {
+                            const isSameDay = (d1, d2) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
+                            if (isSameDay(interviewDate, now)) { dateClass = ' interview-today'; }
+                            else if (isSameDay(interviewDate, tomorrow)) { dateClass = ' interview-tomorrow'; }
+                        }
+
+                        return (
+                        <div key={interview.id} className={`stat-card interview-card${dateClass}`}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start' }}>
                                 <div>
                                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -104,6 +117,18 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
                                 </div>
                             </div>
                             
+                            {interview.connectionDetails && (
+                                <div style={{ width: '100%', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                                    {interview.connectionDetails.startsWith('http') ? (
+                                        <a href={interview.connectionDetails} target="_blank" rel="noopener noreferrer" className="btn btn-sm" style={{ width: '100%', justifyContent: 'center', background: 'var(--accent-primary)', color: 'white', textDecoration: 'none' }}>📹 Join Meeting</a>
+                                    ) : (
+                                        <div style={{ padding: '0.5rem', background: 'var(--bg-tertiary)', borderRadius: '6px', border: '1px solid var(--border-primary)', fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span>📍</span><span>{interview.connectionDetails}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {interview.interviewers && interview.interviewers.length > 0 && (
                                 <div style={{ width: '100%', background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.9rem' }}>
                                     <div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Interviewers</div>
@@ -132,7 +157,7 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
                                 <window.Tooltip text="Edit interview details"><button className="btn btn-secondary btn-sm" onClick={() => onEditJob(jobs.find(j => j.id === interview.jobId), interview.id)}><span role="img" aria-label="Edit">✏️</span></button></window.Tooltip>
                             </div>
                         </div>
-                    ))}
+                    );})}
                 </div>
             )}
         </div>

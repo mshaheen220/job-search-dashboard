@@ -466,7 +466,7 @@ function App() {
             )}
             <window.Header view={view} setView={handleHeaderViewChange} onBackup={exportBackup} onImport={() => setShowImportModal(true)} lastBackupTime={lastBackupTime} theme={theme} toggleTheme={toggleTheme} />
             <main className="main">
-                {view === "dashboard" && <window.AnalyticsDashboard jobs={jobs} />}
+                {view === "dashboard" && <window.AnalyticsDashboard jobs={jobs} onEditJob={(job, interviewId) => { setEditingJob(job); setEditingInterviewId(interviewId); setShowModal(true); }} />}
                 {view === "companies" && <window.Companies
                     companies={allCompanies}
                     jobs={jobs}
