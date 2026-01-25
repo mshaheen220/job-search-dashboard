@@ -71,12 +71,12 @@ const InterviewManager = ({ interviews, onChange, initialEditingInterviewId }) =
     return (
         <div className="form-group interview-manager-container">
             <div className="interview-manager-header">
-                <label style={{ marginBottom: 0 }}>Interviews ({interviews.length})</label>
+                <label className="mb-0">Interviews ({interviews.length})</label>
                 {!isAdding && <button type="button" onClick={() => setIsAdding(true)} className="btn-text-action">+ Add Round</button>}
             </div>
             
             {interviews.length > 0 && (
-                <div className="interview-list" style={{ marginBottom: isAdding ? '1rem' : 0 }}>
+                <div className={`interview-list ${isAdding ? 'mb-4' : ''}`}>
                     {interviews.sort((a, b) => new Date(a.date) - new Date(b.date)).map((interview, idx) => (
                         <div key={interview.id} className="interview-item">
                             <div>
@@ -85,9 +85,9 @@ const InterviewManager = ({ interviews, onChange, initialEditingInterviewId }) =
                                 {interview.interviewers && interview.interviewers.length > 0 && (
                                     <div className="interview-item-interviewers">
                                         {interview.interviewers.map((iv, i) => (
-                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                            <div key={i} className="interviewer-item-row">
                                                 <span>👤 {iv.name}</span>
-                                                {iv.title && <span style={{ color: 'var(--text-tertiary)' }}>- {iv.title}</span>}
+                                                {iv.title && <span className="text-tertiary">- {iv.title}</span>}
                                             </div>
                                         ))}
                                     </div>
@@ -123,15 +123,15 @@ const InterviewManager = ({ interviews, onChange, initialEditingInterviewId }) =
                             </div>
                         ))}
                         <div className="interviewer-inputs">
-                            <input type="text" placeholder="Name" value={tempInterviewer.name} onChange={e => setTempInterviewer({...tempInterviewer, name: e.target.value})} className="form-input-sm" style={{ padding: '0.3rem', fontSize: '0.85rem' }} />
-                            <input type="text" placeholder="Title" value={tempInterviewer.title} onChange={e => setTempInterviewer({...tempInterviewer, title: e.target.value})} className="form-input-sm" style={{ padding: '0.3rem', fontSize: '0.85rem' }} />
-                            <input type="email" placeholder="Email" value={tempInterviewer.email} onChange={e => setTempInterviewer({...tempInterviewer, email: e.target.value})} className="form-input-sm" style={{ padding: '0.3rem', fontSize: '0.85rem' }} />
-                            <input type="url" placeholder="LinkedIn URL" value={tempInterviewer.linkedin} onChange={e => setTempInterviewer({...tempInterviewer, linkedin: e.target.value})} className="form-input-sm" style={{ padding: '0.3rem', fontSize: '0.85rem' }} />
+                            <input type="text" placeholder="Name" value={tempInterviewer.name} onChange={e => setTempInterviewer({...tempInterviewer, name: e.target.value})} className="form-input-sm form-input-compact" />
+                            <input type="text" placeholder="Title" value={tempInterviewer.title} onChange={e => setTempInterviewer({...tempInterviewer, title: e.target.value})} className="form-input-sm form-input-compact" />
+                            <input type="email" placeholder="Email" value={tempInterviewer.email} onChange={e => setTempInterviewer({...tempInterviewer, email: e.target.value})} className="form-input-sm form-input-compact" />
+                            <input type="url" placeholder="LinkedIn URL" value={tempInterviewer.linkedin} onChange={e => setTempInterviewer({...tempInterviewer, linkedin: e.target.value})} className="form-input-sm form-input-compact" />
                         </div>
                         <button type="button" onClick={addInterviewer} disabled={!tempInterviewer.name} className="btn-add-interviewer">+ Add Interviewer</button>
                     </div>
 
-                    <textarea placeholder="Notes / Focus areas" value={newInterview.notes} onChange={e => setNewInterview({...newInterview, notes: e.target.value})} className="form-input-sm" style={{ minHeight: '60px' }} />
+                    <textarea placeholder="Notes / Focus areas" value={newInterview.notes} onChange={e => setNewInterview({...newInterview, notes: e.target.value})} className="form-input-sm textarea-compact" />
                     <select value={newInterview.sentiment} onChange={e => setNewInterview({...newInterview, sentiment: e.target.value})} className="form-input-sm"><option value="">How did it go?</option>{Object.values(window.INTERVIEW_SENTIMENTS).map(s => <option key={s} value={s}>{s}</option>)}</select>
                     <div className="form-actions"><button type="button" onClick={handleCancel} className="btn btn-sm btn-secondary">Cancel</button><button type="button" onClick={handleSave} className="btn btn-sm">{editingId ? 'Update' : 'Add'}</button></div>
                 </div>
@@ -230,7 +230,7 @@ window.CategoryManagerModal = ({ onClose, categories, categoryColors, categoryCo
                         <div className="category-manager-row">
                             <input type="text" placeholder="Category name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAdd()} className="category-manager-input" autoFocus />
                             <window.Tooltip text="Choose category color"><input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} className="category-manager-color" /></window.Tooltip>
-                            <button onClick={handleAdd} className="btn" style={{ whiteSpace: "nowrap" }}>Add</button>
+                            <button onClick={handleAdd} className="btn btn-nowrap">Add</button>
                         </div>
                     </div>
                     <div>
@@ -244,12 +244,12 @@ window.CategoryManagerModal = ({ onClose, categories, categoryColors, categoryCo
                                     return (
                                         <div key={category} className="category-list-item">
                                             {isEditing ? (
-                                                <div className="category-edit-container"><input type="text" value={editingCategoryNewName} onChange={(e) => setEditingCategoryNewName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleRename(category)} className="category-manager-input" style={{ marginRight: "0.5rem", borderColor: "var(--accent-primary)" }} autoFocus /><input type="color" value={editingCategoryColor} onChange={(e) => setEditingCategoryColor(e.target.value)} className="color-picker-sm" title="Choose color" /></div>
+                                                <div className="category-edit-container"><input type="text" value={editingCategoryNewName} onChange={(e) => setEditingCategoryNewName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleRename(category)} className="category-manager-input category-edit-input" autoFocus /><input type="color" value={editingCategoryColor} onChange={(e) => setEditingCategoryColor(e.target.value)} className="color-picker-sm" title="Choose color" /></div>
                                             ) : (
-                                                <div style={{ display: 'flex', alignItems: 'center' }}><div className="category-dot" style={{ backgroundColor: currentColor }}></div><div><span style={{ fontWeight: "500", color: "var(--text-primary)" }}>{category}</span><span style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>({companyCount} {companyCount === 1 ? 'company' : 'companies'})</span></div></div>
+                                                <div className="flex-center"><div className="category-dot" style={{ backgroundColor: currentColor }}></div><div><span className="font-medium">{category}</span><span className="text-sm-secondary">({companyCount} {companyCount === 1 ? 'company' : 'companies'})</span></div></div>
                                             )}
-                                            <div style={{ display: "flex", gap: "0.5rem" }}>
-                                                {isEditing ? (<><button onClick={() => handleRename(category)} className="btn-xs primary">Save</button><button onClick={() => setEditingCategoryName(null)} className="btn-xs secondary">Cancel</button></>) : (<><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { setEditingCategoryName(category); setEditingCategoryNewName(category); setEditingCategoryColor(categoryColors[category] || '#3b82f6'); } }} disabled={category === 'None'} title={category === 'None' ? "Can't edit default category" : ""} className="btn-xs secondary" style={{ opacity: category === 'None' ? 0.5 : 1, cursor: category === 'None' ? "not-allowed" : "pointer" }}>Edit</button><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { onDeleteCategory(category); } }} disabled={category === 'None'} title={category === 'None' ? "Can't delete default category" : ""} className="btn-xs danger-light" style={{ opacity: category === 'None' ? 0.5 : 1, cursor: category === 'None' ? "not-allowed" : "pointer" }}>Delete</button></>)}
+                                            <div className="flex-gap-2">
+                                                {isEditing ? (<><button onClick={() => handleRename(category)} className="btn-xs primary">Save</button><button onClick={() => setEditingCategoryName(null)} className="btn-xs secondary">Cancel</button></>) : (<><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { setEditingCategoryName(category); setEditingCategoryNewName(category); setEditingCategoryColor(categoryColors[category] || '#3b82f6'); } }} disabled={category === 'None'} title={category === 'None' ? "Can't edit default category" : ""} className={`btn-xs secondary ${category === 'None' ? 'btn-disabled-look' : ''}`}>Edit</button><button onClick={(e) => { e.stopPropagation(); if (category !== 'None') { onDeleteCategory(category); } }} disabled={category === 'None'} title={category === 'None' ? "Can't delete default category" : ""} className={`btn-xs danger-light ${category === 'None' ? 'btn-disabled-look' : ''}`}>Delete</button></>)}
                                             </div>
                                         </div>
                                     );
@@ -349,7 +349,7 @@ window.ImportModal = ({ onImport, onClose }) => {
                             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📁</div>
                             <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Drop your backup file here</h3>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>or click to browse</p>
-                            <input type="file" accept=".json" onChange={handleFileInput} style={{ display: 'none' }} id="backup-file-input" />
+                            <input type="file" accept=".json" onChange={handleFileInput} className="hidden" id="backup-file-input" />
                             <label htmlFor="backup-file-input"><span className="btn">Choose file</span></label>
                         </div>
                     ) : (
@@ -367,16 +367,16 @@ window.ImportModal = ({ onImport, onClose }) => {
                                 <h3 style={{ color: 'var(--accent-primary)', marginBottom: '1rem' }}>Import mode</h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     <label className={`import-option ${importMode === 'merge' ? 'selected' : ''}`}>
-                                        <input type="radio" name="importMode" value="merge" checked={importMode === 'merge'} onChange={(e) => setImportMode(e.target.value)} style={{ marginRight: '0.75rem', marginTop: '0.25rem' }} />
-                                        <div><div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>🔄 Merge (recommended for historical data)</div><div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Adds new jobs and companies without deleting existing data. Skips duplicates based on company + role + date.</div></div>
+                                        <input type="radio" name="importMode" value="merge" checked={importMode === 'merge'} onChange={(e) => setImportMode(e.target.value)} className="radio-input" />
+                                        <div><div className="import-text-title">🔄 Merge (recommended for historical data)</div><div className="import-text-desc">Adds new jobs and companies without deleting existing data. Skips duplicates based on company + role + date.</div></div>
                                     </label>
                                     <label className={`import-option ${importMode === 'replace' ? 'selected' : ''}`}>
-                                        <input type="radio" name="importMode" value="replace" checked={importMode === 'replace'} onChange={(e) => setImportMode(e.target.value)} style={{ marginRight: '0.75rem', marginTop: '0.25rem' }} />
-                                        <div><div style={{ color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>⚠️ Replace all</div><div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Deletes all current data and replaces with backup. Use when restoring from backup.</div></div>
+                                        <input type="radio" name="importMode" value="replace" checked={importMode === 'replace'} onChange={(e) => setImportMode(e.target.value)} className="radio-input" />
+                                        <div><div className="import-text-title">⚠️ Replace all</div><div className="import-text-desc">Deletes all current data and replaces with backup. Use when restoring from backup.</div></div>
                                     </label>
                                 </div>
                             </div>
-                            <button className="btn btn-secondary" onClick={() => { setPreview(null); setSelectedFile(null); setFileContent(null); }} style={{ width: '100%' }}>← Choose different file</button>
+                            <button className="btn btn-secondary w-full" onClick={() => { setPreview(null); setSelectedFile(null); setFileContent(null); }}>← Choose different file</button>
                         </>
                     )}
                 </div>
