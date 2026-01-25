@@ -2052,6 +2052,11 @@ body {
     font-size: 0.9rem;
 }
 
+.link-linkedin { color: #0077b5; text-decoration: none; }
+.link-email { color: var(--text-secondary); text-decoration: none; }
+.filter-select-inline { margin-right: 0.5rem; cursor: pointer; }
+.text-xs-secondary { color: var(--text-secondary); font-size: 0.85rem; }
+
 /* Category Manager Modal */
 .category-manager-add {
     margin-bottom: 2rem;

@@ -60,9 +60,9 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
     return (
         <div className="interviews-view">
             <div className="action-bar">
-                <h1 style={{ color: "var(--accent-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: "1.75rem" }}>Interview Schedule</h1>
+                <h1 className="page-title">Interview Schedule</h1>
                 <div className="filters">
-                    <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', marginRight: '0.5rem', cursor: 'pointer' }}><option value="">All companies</option>{companies.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                    <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} className="filter-select filter-select-inline"><option value="">All companies</option>{companies.map(c => <option key={c} value={c}>{c}</option>)}</select>
                     <button className={`btn ${viewType === 'upcoming' ? '' : 'btn-secondary'}`} onClick={() => setViewType('upcoming')}>Upcoming ({upcomingInterviews.length + unscheduledInterviews.length})</button>
                     <button className={`btn ${viewType === 'past' ? '' : 'btn-secondary'}`} onClick={() => setViewType('past')}>Past ({pastInterviews.length})</button>
                 </div>
@@ -75,7 +75,7 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
                     <p>Add interviews to your applications to track them here.</p>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))' }}>
+                <div className="interviews-grid">
                     {displayList.map(interview => {
                         const interviewDate = interview.date ? new Date(interview.date) : null;
                         const now = new Date();
@@ -85,36 +85,44 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
                         let dateClass = '';
                         if (interviewDate) {
                             const isSameDay = (d1, d2) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
-                            if (isSameDay(interviewDate, now)) { dateClass = ' interview-today'; }
+                            if (isSameDay(interviewDate, now)) {
+                                const duration = interview.duration || 30;
+                                const endTime = new Date(interviewDate.getTime() + duration * 60000);
+                                if (now <= endTime) dateClass = ' interview-today';
+                            }
                             else if (isSameDay(interviewDate, tomorrow)) { dateClass = ' interview-tomorrow'; }
                         }
 
+                        const isPhone = interview.connectionDetails && /^[+\d\s\-().]+$/.test(interview.connectionDetails) && (interview.connectionDetails.match(/\d/g) || []).length >= 7;
+
                         return (
                         <div key={interview.id} className={`stat-card interview-card${dateClass}`}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start' }}>
+                            <div className="interview-card-header">
                                 <div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div className="interview-meta">
                                         <window.Tooltip text={interview.format || 'Video Call'}><span style={{ cursor: 'help', fontSize: '1.1em' }}>{window.getFormatIcon(interview.format)}</span></window.Tooltip>
                                         {interview.date ? new Date(interview.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBD'}
                                     </div>
-                                    <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--accent-primary)' }}>{interview.type}</h3>
-                                    <div style={{ fontSize: '1rem', fontWeight: '500', marginTop: '0.25rem' }}>{interview.company}</div>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{interview.role}</div>
+                                    <h3 className="interview-type">{interview.type}</h3>
+                                    <div className="interview-company">{interview.company}</div>
+                                    <div className="interview-role">{interview.role}</div>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                                    {interview.date && <div style={{ background: 'var(--bg-tertiary)', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', minWidth: '60px', border: '1px solid var(--border-primary)' }}>
-                                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{new Date(interview.date).getHours()}:{new Date(interview.date).getMinutes().toString().padStart(2, '0')}</div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{interview.duration}m</div>
+                                <div className="interview-time-container">
+                                    {interview.date && <div className="interview-time-box">
+                                        <div className="time-text">{new Date(interview.date).getHours()}:{new Date(interview.date).getMinutes().toString().padStart(2, '0')}</div>
+                                        <div className="duration-text">{interview.duration}m</div>
                                     </div>}
                                 </div>
                             </div>
                             
-                            {interview.connectionDetails && (
-                                <div style={{ width: '100%', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                            {interview.connectionDetails && (!interviewDate || now <= new Date(interviewDate.getTime() + (interview.duration || 30) * 60000)) && (
+                                <div className="connection-details">
                                     {interview.connectionDetails.startsWith('http') ? (
-                                        <a href={interview.connectionDetails} target="_blank" rel="noopener noreferrer" className="btn btn-sm" style={{ width: '100%', justifyContent: 'center', background: 'var(--accent-primary)', color: 'white', textDecoration: 'none' }}>📹 Join Meeting</a>
+                                        <a href={interview.connectionDetails} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-join">📹 Join Meeting</a>
+                                    ) : isPhone ? (
+                                        <a href={`tel:${interview.connectionDetails}`} className="btn btn-sm btn-join">📞 Call</a>
                                     ) : (
-                                        <div style={{ padding: '0.5rem', background: 'var(--bg-tertiary)', borderRadius: '6px', border: '1px solid var(--border-primary)', fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div className="location-box">
                                             <span>📍</span><span>{interview.connectionDetails}</span>
                                         </div>
                                     )}
@@ -122,26 +130,26 @@ window.Interviews = ({ jobs, onEditJob, initialCompany }) => {
                             )}
 
                             {interview.interviewers && interview.interviewers.length > 0 && (
-                                <div style={{ width: '100%', background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.9rem' }}>
-                                    <div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Interviewers</div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                <div className="interviewers-container">
+                                    <div className="section-title">Interviewers</div>
+                                    <div className="interviewers-list">
                                         {interview.interviewers.map((iv, idx) => (
-                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div key={idx} className="interviewer-item">
                                                 <span>{iv.name}</span>
-                                                {iv.title && <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{iv.title}</span>}
-                                                {iv.linkedin && <a href={iv.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'none' }}>in</a>}
-                                                {iv.email && <a href={`mailto:${iv.email}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>✉️</a>}
+                                                {iv.title && <span className="text-xs-secondary">{iv.title}</span>}
+                                                {iv.linkedin && <a href={iv.linkedin} target="_blank" rel="noopener noreferrer" className="link-linkedin">in</a>}
+                                                {iv.email && <a href={`mailto:${iv.email}`} className="link-email">✉️</a>}
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
-                            {interview.notes && <div style={{ width: '100%', background: 'var(--bg-tertiary)', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.9rem', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto' }}><div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Notes</div>
+                            {interview.notes && <div className="notes-container"><div className="section-title">Notes</div>
 {interview.notes}</div>}
 
-                            <div style={{ marginTop: 'auto', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div className="card-footer">
                                 {interview.sentiment ? (
-                                    <window.Tooltip text={'This interview round went ' + interview.sentiment}><div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '2.0rem', color: 'var(--text-secondary)' }}>
+                                    <window.Tooltip text={'This interview round went ' + interview.sentiment}><div className="sentiment-display">
                                         <span>{getSentimentIcon(interview.sentiment)}</span>
                                         {/* <span>{interview.sentiment}</span> */}
                                     </div></window.Tooltip>
