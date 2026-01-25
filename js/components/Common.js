@@ -26,11 +26,11 @@ class ErrorBoundary extends React.Component {
     render() {
         if (this.state.hasError) {
             return (
-                <div style={{ padding: '2rem', color: '#e4e6eb', background: '#0a0e1a', minHeight: '100vh' }}>
-                    <h1 style={{ color: '#ff6b6b' }}>Something went wrong</h1>
+                <div className="error-boundary-container">
+                    <h1 className="error-title">Something went wrong</h1>
                     <p>Error: {this.state.error?.message}</p>
-                    <button onClick={() => window.location.reload()} style={{ background: '#6b8aff', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', marginTop: '1rem' }}>Reload Page</button>
-                    <pre style={{ marginTop: '1rem', padding: '1rem', background: '#1a1f35', borderRadius: '6px', overflow: 'auto' }}>{this.state.error?.stack}</pre>
+                    <button onClick={() => window.location.reload()} className="error-reload-btn">Reload Page</button>
+                    <pre className="error-stack">{this.state.error?.stack}</pre>
                 </div>
             );
         }
@@ -44,17 +44,7 @@ window.FitLevelSelect = ({ value, onChange }) => {
         <select
             value={window.getFitLevelLabel(value)}
             onChange={(e) => onChange(window.getFitLevelValue(e.target.value))}
-            style={{
-                width: '100%',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-primary)',
-                padding: '0.75rem 1rem',
-                borderRadius: '10px',
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: '0.9rem',
-                transition: 'all 0.2s ease'
-            }}
+            className="fit-level-select"
         >
             {Object.values(window.FIT_LEVELS).map(level => (
                 <option key={level.label} value={level.label}>{level.label}</option>
@@ -90,10 +80,10 @@ window.CategoryList = ({ categories, categoryColors }) => {
     }, [categories, expanded]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+        <div className="category-list-container">
             <div 
                 ref={containerRef}
-                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', maxHeight: expanded ? 'none' : '60px', overflow: 'hidden', width: '100%', transition: 'max-height 0.3s ease' }}
+                className="category-list-wrapper" style={{ maxHeight: expanded ? 'none' : '60px' }}
             >
                 {categories.map(cat => (
                     <span key={cat} className={getCategoryClassName(cat)} style={getCategoryStyle(cat)}>{cat}</span>
@@ -102,7 +92,7 @@ window.CategoryList = ({ categories, categoryColors }) => {
             {(showToggle || expanded) && (
                 <button 
                     onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.75rem', cursor: 'pointer', padding: '0.25rem 0', marginTop: '0.1rem', textDecoration: 'underline' }}
+                    className="show-more-btn"
                 >
                     {expanded ? 'Show less' : 'Show more'}
                 </button>
@@ -189,13 +179,13 @@ window.CategorySelector = ({
 
     return (
         <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <label style={{ marginBottom: 0 }}>Categories</label>
-                {onClear && <button type="button" onClick={onClear} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>}
+            <div className="category-selector-header">
+                <label className="mb-0">Categories</label>
+                {onClear && <button type="button" onClick={onClear} className="clear-btn">Clear</button>}
             </div>
             <div 
                 ref={containerRef}
-                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem', maxHeight: expanded ? 'none' : '85px', overflow: 'hidden', transition: 'max-height 0.3s ease' }}
+                className="category-selector-wrapper" style={{ maxHeight: expanded ? 'none' : '85px' }}
             >
                 {allCategories.map(cat => {
                     const isSelected = selectedCategories.includes(cat);
@@ -222,14 +212,14 @@ window.CategorySelector = ({
                 <button 
                     type="button"
                     onClick={() => setExpanded(!expanded)}
-                    style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.8rem', cursor: 'pointer', padding: '0 0 0.5rem 0', textDecoration: 'underline', display: 'block' }}
+                    className="show-more-btn-lg"
                 >
                     {expanded ? 'Show less' : 'Show more'}
                 </button>
             )}
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Or create new category..." style={{ flex: 1 }} />
-                {newCategory && <window.Tooltip text="Choose category color"><input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} style={{ width: '40px', height: '40px', padding: 0, border: 'none', background: 'none' }} /></window.Tooltip>}
+            <div className="category-add-row">
+                <input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Or create new category..." className="flex-1" />
+                {newCategory && <window.Tooltip text="Choose category color"><input type="color" value={newCategoryColor} onChange={(e) => setNewCategoryColor(e.target.value)} className="color-picker-btn" /></window.Tooltip>}
                 <button type="button" onClick={handleAdd} className="btn btn-sm" disabled={!newCategory.trim()}>Add</button>
             </div>
         </div>
