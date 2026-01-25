@@ -2029,6 +2029,29 @@ body {
     overflow: hidden;
 }
 
+/* Companies & Shared Utilities */
+.text-accent-sm { color: var(--accent-primary); font-size: 0.9rem; }
+.ml-2 { margin-left: 0.5rem; }
+.items-end { align-items: flex-end; }
+.flex-1 { flex: 1; }
+.mb-8 { margin-bottom: 2rem; }
+.relative { position: relative; }
+.text-xs { font-size: 0.75rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.w-9 { width: 2.25rem; }
+.justify-center { justify-content: center; }
+
+.form-select, .form-input {
+    width: 100%;
+    padding: 0.5rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+}
+
 /* Category Manager Modal */
 .category-manager-add {
     margin-bottom: 2rem;
