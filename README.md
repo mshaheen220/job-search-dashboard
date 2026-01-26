@@ -9,6 +9,9 @@ A professional, interactive dashboard for tracking job applications, managing pi
 - **Pipeline funnel**: Track jobs through recruitment stages
 - **Company tracking**: Monitor applications by company with response rates
 - **Closure analysis**: Understand why applications are closed
+- **Interview tracking**: Manage interview rounds, interviewers, and notes
+- **Custom categories**: Organize companies with custom tags and colors
+- **Backup & Restore**: Export your data to JSON and restore backups
 - **Light/Dark theme**: Toggle between themes for comfortable viewing
 - **Responsive design**: Works on desktop and tablet devices
 
@@ -57,16 +60,49 @@ npx http-server
 
 Then visit `http://localhost:8000` in your browser.
 
+## Customization
+
+You can customize the dashboard's configuration and styling without modifying the core files. This allows you to keep your personal settings (like your name, links, or preferred colors) separate from the source code.
+
+### Configuration Overrides (`js/locals.js`)
+
+1. Create a file named `js/locals.js` in the `js` directory.
+2. Define your overrides in `window.LOCAL_CONSTANTS`.
+
+Example `js/locals.js`:
+```javascript
+window.LOCAL_CONSTANTS = {
+    APP_CONFIG: {
+        AUTHOR_NAME: 'Your Name',
+        URLS: {
+            GITHUB: '',
+            PAYPAL: '',
+            PERSONAL: 'https://your-website.com'
+        }
+    }
+};
+```
+
+### Style Overrides (`css/locals.css`)
+
+1. Create a file named `css/locals.css` in the `css` directory.
+2. Add standard CSS to override variables or styles.
+
+Example `css/locals.css`:
+```css
+:root {
+    /* Change primary accent color */
+    --accent-primary: #8b5cf6;
+}
+```
+
+### Version Control
+
+The `.gitignore` file is pre-configured to ignore `js/locals.js` and `css/locals.css`. This ensures your personal information and preferences are not committed to the repository.
+
 ## Data Storage
 
 Job data is stored in your browser's localStorage. Your data persists across sessions but is only stored locally on this device.
-
-## Color Scheme
-
-- **Primary Blue**: #6b8aff
-- **Purple**: #8b5cf6
-- **Amber**: #f59e0b
-- **Green**: #10b981
 
 ## Browser Support
 
@@ -81,3 +117,4 @@ Personal use only.
 ## Author
 
 Jill Shaheen
+Michael Shaheen
