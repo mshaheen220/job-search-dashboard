@@ -353,7 +353,7 @@ function App() {
     };
     const deleteJob = (id) => { if (confirm("Are you sure you want to delete this job?")) { const startTime = performance.now(); setJobs(jobs.filter(j => j.id !== id)); window.PerformanceUtil.clearCache('sortedJobs', ...Object.keys(window.PerformanceUtil.cache).filter(k => k.startsWith('filteredJobs_'))); const duration = performance.now() - startTime; window.LoggerUtil.trackPerformance('deleteJob', duration, true); window.LoggerUtil.trackAction('job_deleted', 'job_management', { jobId: id }); } };
     const exportToCSV = () => { const headers = ["Company", "Role", "Status", "Priority", "Date applied", "URL", "Salary", "Location", "Contact name", "Notes"]; const rows = jobs.map(j => [j.company, j.role, j.status, j.priority, new Date(j.dateApplied).toLocaleDateString(), j.url, j.salary || "", j.location || "", j.contact || "", j.notes || ""]); const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n"); const blob = new Blob([csv], { type: "text/csv" }); const url = window.URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `job-search-${new Date().toISOString().split('T')[0]}.csv`; a.click(); };
-    const exportBackup = () => { try { const backupData = { jobs: jobs, customCompanies: customCompanies, blockedCompanies: blockedCompanies }; const backup = { version: window.APP_CONFIG.VERSION, exportDate: new Date().toISOString(), checksum: window.SecurityUtil.generateChecksum(backupData), data: backupData }; const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }); const url = window.URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `job-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); window.URL.revokeObjectURL(url); const now = new Date(); setLastBackupTime(now); window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.LAST_BACKUP, now.toISOString()); alert("Backup downloaded successfully!"); } catch (error) { window.SecurityUtil.handleError(error, 'exporting backup'); } };
+    const exportBackup = () => { try { const backupData = { jobs: jobs, customCompanies: customCompanies, blockedCompanies: blockedCompanies, categoryColors: categoryColors, customCategories: customCategories, deletedCategories: deletedCategories }; const backup = { version: window.APP_CONFIG.VERSION, exportDate: new Date().toISOString(), checksum: window.SecurityUtil.generateChecksum(backupData), data: backupData }; const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }); const url = window.URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `job-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); window.URL.revokeObjectURL(url); const now = new Date(); setLastBackupTime(now); window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.LAST_BACKUP, now.toISOString()); alert("Backup downloaded successfully!"); } catch (error) { window.SecurityUtil.handleError(error, 'exporting backup'); } };
     const importBackup = (fileContent, mode = 'replace') => {
         try {
             const backup = window.SecurityUtil.validateImportData(fileContent);
@@ -386,6 +386,15 @@ function App() {
                     window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.BLOCKED_COMPANIES, mergedBlocked);
                     window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                 }
+                if (importData.categoryColors && typeof importData.categoryColors === 'object') {
+                    setCategoryColors(prev => ({ ...prev, ...importData.categoryColors }));
+                }
+                if (importData.customCategories && typeof importData.customCategories === 'object') {
+                    setCustomCategories(prev => ({ ...prev, ...importData.customCategories }));
+                }
+                if (importData.deletedCategories && Array.isArray(importData.deletedCategories)) {
+                    setDeletedCategories(prev => [...new Set([...prev, ...importData.deletedCategories])]);
+                }
                 const skipped = validJobs.length - newJobs.length;
                 alert(`Merge complete!\n\nAdded: ${newJobs.length} new jobs\nSkipped: ${skipped} duplicates\nTotal jobs: ${jobs.length + newJobs.length}`);
             } else {
@@ -405,6 +414,18 @@ function App() {
                     setBlockedCompanies(sanitized);
                     window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.BLOCKED_COMPANIES, sanitized);
                     window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
+                }
+                if (importData.categoryColors && typeof importData.categoryColors === 'object') {
+                    setCategoryColors(importData.categoryColors);
+                    window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CATEGORY_COLORS, importData.categoryColors);
+                }
+                if (importData.customCategories && typeof importData.customCategories === 'object') {
+                    setCustomCategories(importData.customCategories);
+                    window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_CATEGORIES, importData.customCategories);
+                }
+                if (importData.deletedCategories && Array.isArray(importData.deletedCategories)) {
+                    setDeletedCategories(importData.deletedCategories);
+                    window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.DELETED_CATEGORIES, importData.deletedCategories);
                 }
                 alert(`Import complete!\n\nImported ${validJobs.length} jobs successfully!`);
             }
