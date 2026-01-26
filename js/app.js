@@ -3,25 +3,29 @@ const { useState, useEffect, useRef } = React;
 window.addEventListener('error', (event) => { console.error('Global error:', event.error); });
 
 function App() {
-    const [theme, setTheme] = useState(() => { const saved = localStorage.getItem('theme'); return saved || 'light'; });
-    useEffect(() => { document.documentElement.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); }, [theme]);
+    const [theme, setTheme] = useState(() => { const saved = localStorage.getItem(window.APP_CONFIG.STORAGE_KEYS.THEME); return saved || 'light'; });
+    useEffect(() => { document.documentElement.setAttribute('data-theme', theme); localStorage.setItem(window.APP_CONFIG.STORAGE_KEYS.THEME, theme); }, [theme]);
     const toggleTheme = () => { setTheme(prev => prev === 'light' ? 'dark' : 'light'); };
     const [view, setView] = useState("dashboard");
-    const [jobs, setJobs] = useState(() => { const saved = localStorage.getItem("jobs"); return saved ? JSON.parse(saved) : []; });
+    const [jobs, setJobs] = useState([]);
     const [customCompanies, setCustomCompanies] = useState({});
-    const [customCategories, setCustomCategories] = useState(() => { const saved = localStorage.getItem("customCategories"); return saved ? JSON.parse(saved) : {}; });
-    const [deletedCategories, setDeletedCategories] = useState(() => { const saved = localStorage.getItem("deletedCategories"); return saved ? JSON.parse(saved) : []; });
-    const [blockedCompanies, setBlockedCompanies] = useState(() => { const saved = localStorage.getItem("blockedCompanies"); return saved ? JSON.parse(saved) : []; });
-    const [categoryColors, setCategoryColors] = useState(() => { const saved = localStorage.getItem("categoryColors"); return saved ? JSON.parse(saved) : {}; });
+    const [customCategories, setCustomCategories] = useState({});
+    const [deletedCategories, setDeletedCategories] = useState([]);
+    const [blockedCompanies, setBlockedCompanies] = useState([]);
+    const [categoryColors, setCategoryColors] = useState({});
     const [showModal, setShowModal] = useState(false);
     const [showCompanyModal, setShowCompanyModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [editingJob, setEditingJob] = useState(null);
+    const [editingInterviewId, setEditingInterviewId] = useState(null);
+    const [viewingJob, setViewingJob] = useState(null);
+    const [highlightInterviewId, setHighlightInterviewId] = useState(null);
     const [lastBackupTime, setLastBackupTime] = useState(null);
     const [filters, setFilters] = useState({ status: "all", priority: "all", company: "", search: "" });
     const [sortConfig, setSortConfig] = useState({ key: 'dateApplied', direction: 'desc' });
     const [showUpdateBanner, setShowUpdateBanner] = useState(false);
     const [currentLastModified, setCurrentLastModified] = useState(null);
+    const [initialInterviewCompany, setInitialInterviewCompany] = useState('');
 
     useEffect(() => {
         document.title = `${window.APP_CONFIG.APP_NAME} - ${window.APP_CONFIG.AUTHOR_NAME}`;
@@ -31,9 +35,9 @@ function App() {
                 const lastModified = response.headers.get('Last-Modified');
                 if (lastModified) {
                     setCurrentLastModified(lastModified);
-                    const saved = localStorage.getItem('lastModifiedTime');
+                    const saved = localStorage.getItem(window.APP_CONFIG.STORAGE_KEYS.LAST_MODIFIED);
                     if (saved && saved !== lastModified) setShowUpdateBanner(true);
-                    else if (!saved) localStorage.setItem('lastModifiedTime', lastModified);
+                    else if (!saved) localStorage.setItem(window.APP_CONFIG.STORAGE_KEYS.LAST_MODIFIED, lastModified);
                 }
             } catch (error) { console.debug('Update check failed:', error); }
         };
@@ -60,7 +64,11 @@ function App() {
                 }
                 setCustomCompanies(validCompanies);
             }
-            const savedBackupTime = localStorage.getItem(window.APP_CONFIG.STORAGE_KEYS.LAST_BACKUP);
+            setCustomCategories(window.StorageUtil.get(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_CATEGORIES, {}));
+            setDeletedCategories(window.StorageUtil.get(window.APP_CONFIG.STORAGE_KEYS.DELETED_CATEGORIES, []));
+            setBlockedCompanies(window.StorageUtil.get(window.APP_CONFIG.STORAGE_KEYS.BLOCKED_COMPANIES, []));
+            setCategoryColors(window.StorageUtil.get(window.APP_CONFIG.STORAGE_KEYS.CATEGORY_COLORS, {}));
+            const savedBackupTime = window.StorageUtil.get(window.APP_CONFIG.STORAGE_KEYS.LAST_BACKUP);
             if (savedBackupTime) { const backupDate = new Date(savedBackupTime); if (!isNaN(backupDate.getTime())) setLastBackupTime(backupDate); }
         } catch (error) { window.SecurityUtil.handleError(error, 'loading saved data'); }
     }, []);
@@ -75,11 +83,20 @@ function App() {
 
     useEffect(() => { if (jobs.length > 0) debouncedSaveJobs(jobs); }, [jobs]);
     useEffect(() => { debouncedSaveCompanies(customCompanies); }, [customCompanies]);
-    useEffect(() => { const saveBlocked = window.PerformanceUtil.debounce(function () { localStorage.setItem("blockedCompanies", JSON.stringify(blockedCompanies)); }, 500); saveBlocked(); }, [blockedCompanies]);
-    useEffect(() => { localStorage.setItem("categoryColors", JSON.stringify(categoryColors)); }, [categoryColors]);
+    useEffect(() => { const saveBlocked = window.PerformanceUtil.debounce(function () { window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.BLOCKED_COMPANIES, blockedCompanies); }, 500); saveBlocked(); }, [blockedCompanies]);
+    useEffect(() => { window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CATEGORY_COLORS, categoryColors); }, [categoryColors]);
+    useEffect(() => { window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_CATEGORIES, customCategories); }, [customCategories]);
+    useEffect(() => { window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.DELETED_CATEGORIES, deletedCategories); }, [deletedCategories]);
     useEffect(() => {
         const flushOnUnload = () => {
-            try { window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.JOBS, jobs); window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, customCompanies); localStorage.setItem('blockedCompanies', JSON.stringify(blockedCompanies)); localStorage.setItem('customCategories', JSON.stringify(customCategories)); localStorage.setItem('deletedCategories', JSON.stringify(deletedCategories)); localStorage.setItem('categoryColors', JSON.stringify(categoryColors)); } catch (e) { console.warn('Failed to flush data on unload:', e); }
+            try { 
+                window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.JOBS, jobs); 
+                window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_COMPANIES, customCompanies); 
+                window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.BLOCKED_COMPANIES, blockedCompanies); 
+                window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CUSTOM_CATEGORIES, customCategories); 
+                window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.DELETED_CATEGORIES, deletedCategories); 
+                window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.CATEGORY_COLORS, categoryColors); 
+            } catch (e) { console.warn('Failed to flush data on unload:', e); }
         };
         window.addEventListener('beforeunload', flushOnUnload);
         return () => window.removeEventListener('beforeunload', flushOnUnload);
@@ -366,7 +383,7 @@ function App() {
                     const sanitizedBlocked = importData.blockedCompanies.filter(name => typeof name === 'string').map(name => window.SecurityUtil.sanitizeInput(name, 200));
                     const mergedBlocked = [...new Set([...blockedCompanies, ...sanitizedBlocked])];
                     setBlockedCompanies(mergedBlocked);
-                    try { localStorage.setItem('blockedCompanies', JSON.stringify(mergedBlocked)); } catch { }
+                    window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.BLOCKED_COMPANIES, mergedBlocked);
                     window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                 }
                 const skipped = validJobs.length - newJobs.length;
@@ -386,7 +403,7 @@ function App() {
                 if (importData.blockedCompanies && Array.isArray(importData.blockedCompanies)) {
                     const sanitized = importData.blockedCompanies.filter(name => typeof name === 'string').map(name => window.SecurityUtil.sanitizeInput(name, 200));
                     setBlockedCompanies(sanitized);
-                    try { localStorage.setItem('blockedCompanies', JSON.stringify(sanitized)); } catch { }
+                    window.StorageUtil.set(window.APP_CONFIG.STORAGE_KEYS.BLOCKED_COMPANIES, sanitized);
                     window.PerformanceUtil.clearCacheByPrefix('sortedJobs_', 'filteredJobs_');
                 }
                 alert(`Import complete!\n\nImported ${validJobs.length} jobs successfully!`);
@@ -432,6 +449,7 @@ function App() {
             return sortedJobs.filter(job => {
                 if (filters.status !== "all" && job.status !== filters.status) return false;
                 if (filters.priority !== "all" && job.priority !== filters.priority) return false;
+                if (filters.company && job.company !== filters.company) return false;
                 if (filters.search) {
                     const searchLower = filters.search.toLowerCase();
                     const matchesRole = job.role.toLowerCase().includes(searchLower);
@@ -443,6 +461,17 @@ function App() {
         });
     }, 1000);
 
+    const handleHeaderViewChange = (newView) => {
+        setInitialInterviewCompany('');
+        setView(newView);
+    };
+    
+    const handleJumpToInterview = (interviewId, company) => {
+        setInitialInterviewCompany(company);
+        setHighlightInterviewId(interviewId);
+        setView('interviews');
+    };
+
     return (
         <div className="app">
             {showUpdateBanner && (
@@ -452,14 +481,14 @@ function App() {
                         {window.APP_CONFIG.URLS.GITHUB && <a href={`${window.APP_CONFIG.URLS.GITHUB}/commits/main/`} target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', marginLeft: '0.5rem', cursor: 'pointer', opacity: 0.9, transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.9'}>What's new?</a>}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={() => { if (currentLastModified) { localStorage.setItem('lastModifiedTime', currentLastModified); } window.location.reload(); }} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', transition: 'all 0.2s', backdropFilter: 'blur(4px)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}>Refresh now</button>
-                        <button onClick={() => { if (currentLastModified) { localStorage.setItem('lastModifiedTime', currentLastModified); } setShowUpdateBanner(false); }} style={{ background: 'transparent', color: 'white', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '1.2rem', transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>×</button>
+                        <button onClick={() => { if (currentLastModified) { localStorage.setItem(window.APP_CONFIG.STORAGE_KEYS.LAST_MODIFIED, currentLastModified); } window.location.reload(); }} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', transition: 'all 0.2s', backdropFilter: 'blur(4px)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}>Refresh now</button>
+                        <button onClick={() => { if (currentLastModified) { localStorage.setItem(window.APP_CONFIG.STORAGE_KEYS.LAST_MODIFIED, currentLastModified); } setShowUpdateBanner(false); }} style={{ background: 'transparent', color: 'white', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '1.2rem', transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>×</button>
                     </div>
                 </div>
             )}
-            <window.Header view={view} setView={setView} onBackup={exportBackup} onImport={() => setShowImportModal(true)} lastBackupTime={lastBackupTime} theme={theme} toggleTheme={toggleTheme} />
+            <window.Header view={view} setView={handleHeaderViewChange} onBackup={exportBackup} onImport={() => setShowImportModal(true)} lastBackupTime={lastBackupTime} theme={theme} toggleTheme={toggleTheme} />
             <main className="main">
-                {view === "dashboard" && <window.AnalyticsDashboard jobs={jobs} />}
+                {view === "dashboard" && <window.AnalyticsDashboard jobs={jobs} onEditJob={(job, interviewId) => { setEditingJob(job); setEditingInterviewId(interviewId); setShowModal(true); }} onViewJob={(job) => setViewingJob(job)} onJumpToInterview={handleJumpToInterview} />}
                 {view === "companies" && <window.Companies
                     companies={allCompanies}
                     jobs={jobs}
@@ -473,7 +502,7 @@ function App() {
                     onUnhideCompany={(companyName) => { setBlockedCompanies(prev => prev.filter(name => name !== companyName)); }}
                     onAddJob={(company) => { setEditingJob({ company: company.name, url: company.url }); setShowModal(true); }}
                     onAddCompany={() => setShowCompanyModal(true)}
-                    onViewCompanyJobs={(companyName) => { setView('jobs'); setFilters({ ...filters, search: companyName }); }}
+                    onViewCompanyJobs={(companyName) => { setView('jobs'); setFilters({ ...filters, company: companyName, search: '' }); }}
                 />}
                 {view === "jobs" && <window.JobsTable
                     jobs={filteredJobs}
@@ -486,23 +515,35 @@ function App() {
                     existingCategories={Object.keys(allCompanies)}
                     onAdd={() => { setEditingJob(null); setShowModal(true); }}
                     onEdit={(job) => { setEditingJob(job); setShowModal(true); }}
+                    onViewJob={(job) => setViewingJob(job)}
                     onUpdateJob={updateJob}
                     onDelete={deleteJob}
                     onExport={exportToCSV}
                     onBackup={exportBackup}
                     requestSort={requestSort}
                     getSortIcon={getSortIcon}
+                    onViewInterviews={(company) => { setInitialInterviewCompany(company); setView('interviews'); }}
                 />}
+                {view === "interviews" && <window.Interviews jobs={jobs} initialCompany={initialInterviewCompany} highlightInterviewId={highlightInterviewId} onEditJob={(job, interviewId) => { setEditingJob(job); setEditingInterviewId(interviewId); setShowModal(true); }} />}
                 {view === "stats" && <window.Stats jobs={jobs} />}
             </main>
             {showModal && (
                 <window.JobModal 
                     job={editingJob} 
+                    initialEditingInterviewId={editingInterviewId}
                     onSave={editingJob?.id ? updateJob : addJob} 
-                    onClose={() => { setShowModal(false); setEditingJob(null); }} 
+                    onClose={() => { setShowModal(false); setEditingJob(null); setEditingInterviewId(null); }} 
                     existingCategories={Object.keys(allCompanies)}
                     categoryColors={categoryColors}
                     companyCategories={editingJob ? (customCompanies[editingJob.company]?.categories || []) : []}
+                />
+            )}
+            {viewingJob && (
+                <window.JobDetailsModal
+                    job={viewingJob}
+                    onClose={() => setViewingJob(null)}
+                    onUpdateJob={updateJob}
+                    onViewInterviews={(company) => { setViewingJob(null); setInitialInterviewCompany(company); setView('interviews'); }}
                 />
             )}
             {showCompanyModal && (<window.CompanyModal onSave={addCompany} onClose={() => setShowCompanyModal(false)} existingCategories={Object.keys(allCompanies)} categoryColors={categoryColors} />)}

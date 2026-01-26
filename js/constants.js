@@ -1,5 +1,5 @@
 window.APP_CONFIG = {
-    VERSION: '1.0',
+    VERSION: '2.3',
     APP_NAME: 'Job Search Dashboard',
     AUTHOR_NAME: 'Michael Shaheen',
     URLS: {
@@ -10,9 +10,13 @@ window.APP_CONFIG = {
     STORAGE_KEYS: {
         JOBS: 'jobTrackerJobs',
         CUSTOM_COMPANIES: 'jobTrackerCustomCompanies',
-        BLOCKED_COMPANIES: 'blockedCompanies',
+        CUSTOM_CATEGORIES: 'jobTrackerCustomCategories',
+        DELETED_CATEGORIES: 'jobTrackerDeletedCategories',
+        BLOCKED_COMPANIES: 'jobTrackerBlockedCompanies',
+        CATEGORY_COLORS: 'jobTrackerCategoryColors',
         LAST_BACKUP: 'jobTrackerLastBackup',
-        THEME: 'theme'
+        THEME: 'jobTrackerTheme',
+        LAST_MODIFIED: 'jobTrackerLastModified'
     },
     BACKUP_INTERVAL_MS: 60 * 60 * 1000,
     MS_PER_DAY: 1000 * 60 * 60 * 24,
@@ -53,6 +57,25 @@ window.PRIORITY_TIERS = {
 };
 
 window.PRIORITIES = Object.values(window.PRIORITY_TIERS);
+
+window.INTERVIEW_FORMATS = {
+    IN_PERSON: 'In Person',
+    PHONE: 'Phone',
+    VIDEO_ZOOM: 'Zoom',
+    VIDEO_TEAMS: 'Teams',
+    VIDEO_MEET: 'Google Meet',
+    VIDEO_OTHER: 'Video Call',
+    OTHER: 'Other'
+};
+
+window.INTERVIEW_SENTIMENTS = {
+    FANTASTIC: 'Fantastic',
+    GREAT: 'Great',
+    GOOD: 'OK',
+    NEUTRAL: 'Neutral',
+    POOR: 'Poorly',
+    TERRIBLE: 'Terribly'
+};
 
 window.FIT_LEVELS = {
             UNSET: { label: '—', value: null },
