@@ -132,9 +132,9 @@ window.Interviews = ({ jobs, onEditJob, initialCompany, highlightInterviewId }) 
                                     <div className="interview-company">{interview.company}</div>
                                     <div className="interview-role">{interview.role}</div>
                                 </div>
-                                <div className="interview-time-container">
+                               <div className={`interview-time-container${viewType === 'past' ? ' past-time' : ''}`}>
                                     {interview.date && <div className="interview-time-box">
-                                        <div className="time-text">{new Date(interview.date).getHours()}:{new Date(interview.date).getMinutes().toString().padStart(2, '0')}</div>
+                                        <div className="time-text">{new Date(interview.date).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })}</div>
                                         <div className="duration-text">{interview.duration}m</div>
                                     </div>}
                                 </div>

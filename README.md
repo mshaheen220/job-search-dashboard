@@ -116,5 +116,5 @@ Personal use only.
 
 ## Author
 
-Jill Shaheen
-Michael Shaheen
+- Jill Shaheen
+- Michael Shaheen
