@@ -67,7 +67,8 @@ You can customize the dashboard's configuration and styling without modifying th
 ### Configuration Overrides (`js/locals.js`)
 
 1. Create a file named `js/locals.js` in the `js` directory.
-2. Define your overrides in `window.LOCAL_CONSTANTS`.
+2. Uncomment the reference to `js/locals.js` in `index.html`.
+3. Define your overrides in `window.LOCAL_CONSTANTS`.
 
 Example `js/locals.js`:
 ```javascript
@@ -86,7 +87,8 @@ window.LOCAL_CONSTANTS = {
 ### Style Overrides (`css/locals.css`)
 
 1. Create a file named `css/locals.css` in the `css` directory.
-2. Add standard CSS to override variables or styles.
+2. Uncomment the reference to `css/locals.css` in `index.html`.
+3. Add standard CSS to override variables or styles.
 
 Example `css/locals.css`:
 ```css
