@@ -1743,6 +1743,11 @@ body {
     font-size: 1.2rem;
     font-weight: bold;
 }
+.interview-time-container.past-time .time-text{
+    opacity: 0.2;
+    display: none;
+}
+
 
 .duration-text {
     font-size: 0.75rem;
